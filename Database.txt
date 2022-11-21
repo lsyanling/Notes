@@ -1,0 +1,175 @@
+数据模型包括数据结构、数据操作和完整性约束条件
+
+联系本身也是一个实体型
+
+层次模型只能一对多，记录可以定义排序字段，只有按路径查看才有意义
+
+层次模型多对多：分解为一对多
+冗余结点法、虚拟结点法
+
+存储：邻接法，先序遍历；链接法
+
+关系必须是规范化的，满足一定的规范条件
+最基本的规范条件：关系的每一个分量必须是一个不可分的数据项，不允许表中还有表
+
+5种基本操作：选择、投影、并、差、笛卡尔积
+
+集合操作
+
+元组关系演算ALPHA QUEL，基本对象是元组变量
+域关系演算QBE，基本对象是域变量
+
+外键不能是主键
+外键所在的表是参照关系
+外键可以指向自己的关系
+外键或者为空，或者等于主键
+
+三类计算机系统安全问题
+技术安全、管理安全、政策法律
+
+非法使用数据库的情况
+编写合法程序绕过DBMS及其授权机制
+直接或编写程序执行非授权操作
+多次合法查询数据库推导保密数据
+
+数据库安全性控制的方法
+用户标识和鉴别
+存取控制
+视图
+审计日志
+密码存储
+
+自主存取控制DAC：GRANT REVOKE
+用户权限由数据对象和操作类型组成
+强制存取控制MAC
+
+GRANT SELECT ON TABLE table1 TO user1
+GRANT ALL PRIVILIGES ON TABLE table1 TO user1, user2, PUBLIC
+GRANT UPDATE(Sno),SELECT ON TABLE table1 TO user1 WITH GRANT OPTION
+
+REVOKE SELECT ON TABLE table1 FROM user1
+
+CASCADE级联收回
+
+CREATE USER username
+CREATE ROLE rolename
+
+WITH ADMIN OPTION
+
+MAC
+绝密 机密 可信 公开
+许可证级别和密级
+大于等于可读，等于（修正规则为小于等于）可写
+实现MAC需要先实现DAC
+高级别安全保护包含低级别安全保护
+
+审计
+AUDIT ALTER, UPDATE ON SC
+NOAUDIT ALTER, UPDATE ON SC
+
+统计数据库
+只允许用户查询聚集信息，不允许查询单个记录
+规定任何查询至少要涉及N个以上的记录
+任意两个查询的相交数据项不超过M个
+任意用户的查询次数不超过1+(N-2)/M
+
+数据库完整性包括数据的正确性和相容性
+
+为维护数据库的完整性，DBMS必须：
+提供定义完整性约束条件的机制
+提供完整性检查的方法
+违约处理
+
+外键删除主键的违约处理，拒绝、级联删除或设置为空
+ON DELETE NO ACTION
+FOREIGN KEY(Cno) REFERENCES Course(Cno) ON UPDATE CASCADE
+
+CHECK Ssex IN('男', '女') 
+
+域完整性
+CHECK VALUE IN('男', '女') 
+
+CREATE TRIGGER 触发器名 BEFORE 事件 ON 表名 FOR EACH ROW/STATEMENT AS BEGIN END
+
+BEGIN TRANSACTION
+ROLLBACK
+COMMIT
+
+事务的ACID特性
+原子性，一致性，隔离性，持续性
+
+事物内部故障，系统故障，介质故障，计算机病毒
+
+静态转储，动态转储
+动态转储不能保证副本的数据正确有效
+动态转储需要日志文件
+
+以记录为单位的日志
+各个事务的开始标记
+各个事务的结束标记
+各个事务的更新操作
+事务标识，操作类型，操作对象，旧值，新值
+
+以块为单位的日志
+事务标识
+被更新的数据块
+
+先写日志文件，后写数据库
+
+检查点
+建立检查点时所有正在执行的事务清单
+这些事务最近的日志记录的地址
+
+重新开始记录
+记录各个检查点记录在日志文件中的地址
+
+并发的数据不一致性
+丢失修改，不可重复读，读脏数据
+
+活锁
+先来先服务
+
+可串行化
+冲突可串行化
+
+两段锁协议：可能死锁
+扩展阶段，收缩阶段
+
+封锁对象：逻辑单元、物理单元
+
+对一个结点加意向锁，说明该结点的下层结点正在被加锁
+对一结点加锁，必须先对它的所有上层结点加意向锁
+
+优化：查询优化，代数优化
+
+hash join需要较小的表能全部放入内存
+
+选择先做，投影和选择同时做，投影和前后的双目运算符结合，选择和前面的笛卡尔积结合变为连接
+
+GET W (3) (Student.Sno，Student.Sage):
+         Student.Sdept='IS' DOWN Student.Sage
+
+RANGE Student X
+GET W (X.Sname):
+		X.Sdept=‘IS’
+
+HOLD W (Student.Sno，Student.Sdetp):
+		Student.Sno='95007'
+		MOVE  ‘IS’ TO W.Sdept
+UPDATE W
+
+MOVE '8' TO W.Cno
+		MOVE '计算机组织与结构' TO W.Cname
+		MOVE '6' TO W.Cpno
+		MOVE '2' TO W.Ccredit
+		PUT W (Course)
+
+HOLD W (Student):Student.Sno='95110'
+		DELETE W
+
+
+AO升序，DO降序，后面圆括号表示优先级
+
+CREATE SCHEMA AUTHORIZATION WANG
+
+子查询不能使用ORDER BY子句

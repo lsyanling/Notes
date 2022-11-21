@@ -1,0 +1,228 @@
+SELECT语句
+SELECT 列名 FROM 表名;	//返回所有行的这一列
+SELECT 列名, 列名, 列名 FROM 表名;	//返回多个列
+SELECT DISTINCT 列名 FROM 表名;	//只返回列的不同的值
+DISTINCT作用于所有的列，不仅是其后面的那一列，因此如果使用SELECT DISTINCT检索多个列，除非这些列都完全相同，否则所有的行都会被检索出来
+
+只返回一定数量的行
+SELECT 列名 FROM 表名 LIMIT	 3;	//返回不超过3行数据
+SELECT 列名 FROM 表名 LIMIT 3 OFFSET 5;	//从第5行起的不超过3行数据
+SQL计数从0开始
+
+MySQL简化LIMIT OFFSET语法
+LIMIT 4 OFFSET 3可以写成LIMIT 3, 4	//顺序正好相反
+
+行内注释 -- 相当于 //
+行首注释 #
+多行注释 /**/
+
+ORDER BY子句
+ORDER BY后取一个或多个列名，按给定的列名依次排序输出
+ORDER BY子句必须是SELECT语句的最后一个子句
+ORDER BY子句可以对非SELECT列排序
+
+ORDER BY按列相对位置排序
+SELECT 列3, 列2, 列5 FROM 表名 ORDER BY 2, 3;
+按列2，列5的顺序排序
+按相对位置排序时，列必须出现在SELECT中
+
+默认以升序排序，DESC关键字指出按降序排序
+SELECT 列3, 列2, 列5 FROM 表名 ORDER BY 列2 DESC;
+DESC只对位于其直接前面的列有效，如果要对多个列降序排序，每个列都需要指定DESC关键字
+
+WHERE子句
+WHERE子句在表名即FROM之后给出
+SELECT 列2, 列4 FROM 表名 WHERE 列4 = 3.3;
+该语句检索两个列，只返回列4的值为3.3的行
+
+条件操作符
+=	等于
+<>	不等于
+!=	不等于
+!<	不小于
+!>	不大于
+BETWEEN AND	在两者之间
+IS NULL	为NULL值
+
+SELECT 列2, 列4 FROM 表名 WHERE 列4 BETWEEN 5 AND 10;
+
+单引号用于限定字符串
+
+逻辑操作符
+AND
+OR
+SQL首先处理AND操作符，AND优先级更高
+
+IN操作符
+IN操作符指定条件范围，范围中的每个条件都可以进行匹配
+SELECT 列2, 列4 FROM 表名 WHERE 列2 IN('DLL01', 'BRS01');
+
+NOT操作符
+用在WHERE子句中列的前面
+SELECT 列2, 列4 FROM 表名 WHERE NOT 列2 IN('DLL01', 'BRS01');
+
+LIKE谓词
+在搜索子句中使用通配符，必须使用LIKE操作符
+严格来说，LIKE是谓词而不是操作符
+通配符搜索只能用于字符串
+
+%或*表示任意字符出现任意次，包括0次
+SELECT 列2, 列4 FROM 表名 WHERE 列2 LIKE 'Fish%';
+%不匹配NULL
+
+_或?表示任意单个字符
+[]用来指定一个字符集，它匹配其中一个字符
+SELECT 列2, 列4 FROM 表名 WHERE 列2 LIKE '[JM]%';
+输出以J或M开头的列2
+
+^或!用于否定[]通配符
+SELECT 列2, 列4 FROM 表名 WHERE 列2 LIKE '[^JM]%';
+输出不以J和M开头的列2
+
++或||用于连接字段
+SELECT 列2+'('+列4+')' FROM 表名 ORDER BY 列2;
+MySQL需要使用函数完成此功能
+SELECT Concat(列2, '(', 列4, ')') FROM 表名 ORDER BY 列2;
+
+LTRIM(), RTRIM(), TRIM()函数
+用于清除自动填充的空格，其中LTRIM()清除字符串坐标的空格
+SELECT RTRIM(列2)+'('+RTRIM(列4)+')' FROM 表名 ORDER BY 列2;
+
+AS关键字
+给列赋别名，别名是一个字段或值的替换名
+SELECT RTRIM(列2)+'('+RTRIM(列4)+')' AS 列6
+FROM 表名 ORDER BY 列2;
+别名可以是单词或字符串，但建议为单词
+
+创建数据库
+CREATE DATABASE 数据库名
+
+删除数据库
+DROP DATEBASE 数据库名
+
+创建数据表
+CREATE TABLE 表名(
+字段名 字段类型 NOT NULL,
+字段名 字段类型 [默认值],
+字段名 字段类型 [默认值]
+);
+
+修改数据表
+ALTER TABLE 表名
+ADD 列名 字段类型
+
+ALTER TABLE 表名
+DROP COLUMN 列名
+
+删除数据表
+DROP TABLE 数据表名
+
+数据类型转换
+CONVERT()
+
+提取字符串的部分
+MID()或SUBSTRING()
+
+取当前日期
+GETDATE();
+
+LEFT()（或使用子字符串函数） 返回字符串左边的字符
+LENGTH()（也使用DATALENGTH()或LEN()） 返回字符串的长度
+LOWER()（Access使用LCASE()） 将字符串转换为小写
+LTRIM() 去掉字符串左边的空格
+RIGHT()（或使用子字符串函数） 返回字符串右边的字符
+RTRIM() 去掉字符串右边的空格
+SOUNDEX() 返回字符串的SOUNDEX值
+UPPER()（Access使用UCASE()） 将字符串转换为大写
+
+SOUNDEX 是一个将任何文本串转换为描述其语音表示的字母数字模式的算法
+
+日期的一部分
+DATEPART()
+SELECT 列1 From 表名 WHERE DATEPART('yyyy', 列2)
+
+ABS() 返回一个数的绝对值
+COS() 返回一个角度的余弦
+EXP() 返回一个数的指数值
+PI() 返回圆周率
+SIN() 返回一个角度的正弦
+SQRT() 返回一个数的平方根
+TAN() 返回一个角度的正切
+
+AVG() 返回某列的平均值
+COUNT() 返回某列的行数
+MAX() 返回某列的最大值
+MIN() 返回某列的最小值
+SUM() 返回某列值之和
+
+SELECT AVG(列2) AS avg_2 FROM 表名
+
+SELECT AVG(prod_price) AS avg_price
+FROM Products
+WHERE vend_id = 'DLL01'
+
+AVG()忽略值为NULL的行
+
+COUNT(*)对行计数，包括NULL
+COUNT(列名)对列具有值的行计数，不包括NULL
+
+MIN()、MAX()必须指定列名
+
+SUM()可以计算合计值
+SELECT SUM(item_price*quantity) AS total_price
+FROM OrderItems
+WHERE order_num = 20005;
+
+除了Access，可以在聚集函数中使用DISTINCT参数表明只包含不同的值
+但DISTINCT不能用于COUNT(*)，DISTINCT必须使用列名，不能用于计算或表达式
+
+多个聚集函数
+SELECT COUNT(*) AS num_items,
+MIN(prod_price) AS price_min,
+MAX(prod_price) AS price_max,
+AVG(prod_price) AS price_avg
+FROM Products;
+
+GROUP BY子句
+创建分组
+SELECT vend_id, COUNT(*) AS num_prods
+FROM Products
+GROUP BY vend_id;
+将按照vend_id的值排序并分组计算COUNT(*)
+
+vend_id num_prods
+------- ---------
+BRS01 3
+DLL01 4
+FNG01 2
+
+GROUP BY支持可选的ALL子句，可用于返回没有匹配行的分组，包括NULL
+如果分组列中包含具有NULL 值的行，则NULL 将作为一个分组返回，如果列中有多行NULL 值，它们将分为一组
+除聚集计算语句外，SELECT 语句中的每一列都必须在GROUP BY 子句中给出
+GROUP BY子句中的列只能是列或表达式，不能是聚集函数，且不能使用别名
+GROUP BY列不能带有长度可变的数据类型，如文本或备注字段
+如果在GROUP BY子句嵌套了分组，数据将在最后指定的分组上进行汇总
+
+
+约束
+非空约束NOT NULL
+唯一约束UNIQUE
+主键约束PRIMARY KEY
+检查约束CHECK	// mysql不支持
+默认约束DEFAULT
+外键约束FOREIGN KEY
+
+多表查询
+显式内连接
+SELECT 字段 FROM 表1 [INNER] JOIN 表2 ON 条件
+别名
+SELECT t1.name, t1.gendet, t2.dname FROM 表1 t1, 表2 t2 WHERE 条件
+
+外连接查询
+SELECT 字段 FROM 表1 LEFT [OUTER] JOIN 表2 ON 条件
+SELECT 字段 FROM 表1 RIGHT [OUTER] JOIN 表2 ON 条件
+
+子查询
+单行单列的子查询可以作为条件值，直接使用= != > <等进行判断
+多行单列的子查询可以作为IN关键字判断的条件值
+多行多列的子查询作为虚拟表

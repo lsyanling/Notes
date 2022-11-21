@@ -1,0 +1,2211 @@
+From C++ Primer Plus
+不包含17章
+2021.11.7
+
+cin.get()语句读取下一次击键
+
+类，函数和变量是C++编译器的标准组件，它们都被放置在名称空间std中
+这意味着iostream中定义的cout变量实际上是std::cout
+仅当头文件没有扩展名h时情况如此
+使用iostream.h时并非如此
+
+using namespace std;
+该编译指令使std名称空间中的所有名称都可用
+更好的方法是只使所需的名称可用，using声明如下
+using std::cout;
+using std::endl;
+using std::cin;
+从而可以使用cin和cout而不必加上std::前缀
+
+std::cout << "Come up and C++ me some time.";
+<<表示该语句将把这个字符串发送给cout，该符号指出了信息流动的路径
+cout是一个预定义的对象，知道如何显示字符，字符串和数字等
+<<将其右侧的信息插入到流中
+
+cout << endl;
+endl表示重起一行，称为控制符，在iostream中定义，位于名称空间std中
+
+可以使用\n换行，差别是endl确保程序刷新输出，而使用\n不能保证
+
+cin为流入程序的对象，cin用>>运算符从输入流中抽取字符，在运算符右侧提供一个变量以接受抽取的信息
+
+cout是一个ostream类对象，cin是一个istream类对象
+
+C++初始化语法
+int newinit(12);
+int hamburgers = {24};
+int emus{7};
+下面两种将把变量初始化为0
+int rocs={};
+int psychics{};
+
+用大括号初始化称为列表初始化，列表初始化禁止缩窄转换
+
+缩窄转换
+从浮点数转换为整数
+从取值范围大的浮点数转换为取值范围小的浮点数（在编译期可以计算并且不会溢出的表达式除外）
+从整数转换为浮点数（在编译期可以计算并且转换之后值不变的表达式除外）
+从取值范围大的整数转换为取值范围小的整数（在编译期可以计算并且不会溢出的表达式除外）
+
+hex，oct控制符，修改cout显示整数的方式
+cout << std::hex
+改为十六进制显示
+如果使用了using编译指令，hex便不能作为变量名
+
+成员函数cout.put()用于代替<<显示字符，因为在C++的Realease2.0之前，C++将字符常量储存为int，cout << 'M' 显示的是M的ASCII码，在之后的版本里，C++将字符常量存储为char，cout可以正确地处理字符常量了
+
+通用字符名
+\u后接8个十六进制位，\U后接16个十六进制位，表示ISO 10646码点
+
+char默认情况下既不是有符号也不是无符号，取决于实现
+因此可以使用signed char和unsigned char显示设置
+
+wchar_t宽字符类型可以表示扩展字符集，cin和cout将输入输出看作char流，因此要使用wcin和wcout处理wchar_t流
+
+前缀L指示宽字符常量和宽字符串
+wchar_t bob = L'P';
+wcout << L"tall";
+
+C++使用前缀u表示char16_t类型，前缀U表示char32_t类型的字符常量和字符串常量
+char16_t和\u00F6形式匹配，char32_t和\U0000222B形式匹配
+char16_t ch1 = u'q';
+
+C++中可以用const值声明数组长度
+const值未初始化将是不确定的，且无法修改
+
+在初始化中，使用auto而不指定变量类型，将把变量类型设置成与初始值相同
+auto x = 3.25
+
+cin.getline()读取一行输入直到换行符，第一个参数是数组名，第二个参数是包括空字符在内的要读取的字符数，并丢弃换行符
+
+cin.get()读取一行输入直到换行符，第一个参数是数组名，第二个参数是包括空字符在内的要读取的字符数，但把换行符留在输入队列
+连续调用cin.get()时，如果不借助帮助，cin.get()将不能跨过此换行符
+但cin.get()不接受参数时读取下一个字符，因此可以用它处理换行符
+
+cin.get(name, ArSize).get()
+cin.get(name, ArSize)返回一个cin对象，该对象随后被用来调用cin()
+同样，可以使用下面拼接方式把输入中连续两行读入两个数组中
+cin.getline(name, ArSize).getline(name2, ArSize)
+
+如果使用get()，通过查看下一个输入字符是否是换行符
+可以看出是已读取了整行还是数组已被填满
+getline()使用起来简单一些，但get()使得检査错误更简单些
+
+如果get()读取到空行，将设置失效位，阻断接下来的输入，可以用下面的命令恢复
+cin.clear();
+如果输入字符串比指定的长，getline()会设置失效位并关闭输入
+
+表达式cin >> year返回cin对象，因此可以
+(cin >> year).get(ch);
+
+可以使用C风格字符串初始化string对象
+可以使用cin和cout操作string对象
+可以使用数组表示法访问string对象中的字符
+
+char str[] = {"abc"};
+char str[] {"abc"};
+string str = {"abc"};
+string str {"abc"};
+
+可以将一个string对象赋给一个string对象，而显然数组不可以
+使用+运算符合并两个string对象，+=将字符串附加到string对象的末尾
+
+string类位于string头文件中，cstring头文件提供了C风格字符串函数
+
+int len1 = str1.size()
+int len2 = strlen(str2)
+
+strlen()读取到第一个空字符为止，因此对未初始化的字符数组使用将得到不确定的值
+
+未初始化的string对象的长度为0
+
+istream类中没有处理string对象的类方法，因此使用函数getline()
+getline(cin, str);
+
+对字符串字面量，使用前缀L、u、U创建为wchar_t、char16_t、char32_t型
+使用前缀u8创建为UTF-8字符串
+
+在raw字符串中，字符串表示的就是自己，\n不表示换行符
+原始字符串不使用"界定字符串的首尾，使用"( 和 )"作为定界符
+使用前缀R表示原始字符串
+cout << R"(abc)" << '\n'
+
+输入原始字符串时，按回车键不仅会移到下一行，还将在字符串中添加回车符
+如果要在原始字符串中包含)"，原始字符串允许在"和(之间包含其它字符，并在)和"之间直接也如此做，以此界定字符串的首尾
+cout << R"+*("()")+*" << endl;
+结果为
+"()"
+
+自定义定界符时，可以添加任意数量的基本字符，但空格、左右括号、斜杠和控制字符如换行符除外
+
+R和u、U等其他字符串前缀可结合使用，顺序没有影响
+
+在C++中，声明结构变量时允许省略关键字struct
+struct inflatable{
+    char name[20];
+    float volume;
+};
+inflatable hat;
+
+结构声明位于外部可以被其后面的任何函数使用，内部声明只能被该声明所属的函数使用
+
+外部变量由所有函数共享，不提倡使用外部变量，但提倡使用外部结构声明和外部声明符号常量
+
+结构初始化的=同样是可选的，大括号内未包含任何东西，各成员将被设置为0
+同样，不允许缩窄转换
+
+结构可以将string对象作为成员，但一定要让结构定义能够访问名称空间std
+为此，可以将using指令移到结构定义之前，也可以将name的定义声明为std::string
+struct inflatable{
+    std::string name;
+};
+
+可以同时完成结构的定义和创建结构变量，只需将变量名放在结束花括号之后
+struct perks{
+    int key_number;
+}mr_smith, ms_jones;
+
+可以初始化以这种方式创建的变量
+struct perks{
+    int key_number;
+}mr_smith = {7};
+
+可以声明没有名称的结构类型
+struct{
+    int x;
+}position;
+这将创建一个名为position的结构变量，但以后无法创建这种类型的变量
+
+C++结构除了成员变量之外，还可以有成员函数，即方法
+
+结构中的位字段
+字段的类型应为整型或枚举型，接下来是冒号，冒号后为使用的位数
+可以使用没有名称的字段提供间距
+struct torgle_register{
+    unsigned int SN : 4;
+    unsigned int : 4;
+    bool goodIn : 1;
+}
+
+可以像通常那样初始化位字段，可以使用标准的结构表示法访问位字段
+
+共用体也可以省略union
+
+enum spectrum{red, orange, yellow};
+让spectrum成为新类型的名称，像struct变量被称为结构一样
+red, orange, yellow作为符号常量，对应整数值0 1 2
+
+使用枚举名声明这种类型的变量
+spectrum band;
+只能将定义枚举时使用的枚举量赋给枚举变量
+枚举只定义了赋值运算符，没有算术运算
+
+不能将整数值赋给枚举变量
+red是spectrum类型
+可以将int值强制类型转换为枚举量
+band = spectrum(3);
+但必须在枚举量的取值范围内，否则为未定义
+band = spectrum(40003);	//未定义
+
+可以省略枚举类型的名称
+enum{red, oragne, yellow};
+
+枚举量的取值范围
+上限为大于枚举量最大值的最小的2的幂减1，如枚举量101，上限为127
+如果枚举量最小值不小于0，则下限为0
+如果枚举量最小值小于0，下限和上限计算相同，不过要加上负号
+如枚举量-6，下限为-7
+
+指针不是整型，不能将整数赋给指针，但可以使用强制类型转换如此做
+int* p;
+p = 0xB8000000	//不行
+p = (int*)0xB8000000	//可以
+
+new运算符
+int* pn = new int;
+new分配内存，返回一个地址
+
+变量的值存储在栈stack中，而new从堆heap或者自由存储区free store中分配内存
+
+delete运算符
+和new配对使用，释放new申请的内存，作用于指针
+delete pn;
+如果delete已经释放的内存，结果是未定义的
+不能使用delete释放声明变量获得的内存
+
+new创建动态数组
+int* psome = new int[10];
+delete释放动态数组
+delete[] psome;
+如果使用new[]为一个数组分配内存，则使用delete[]
+如果使用new为一个实体(single entity)分配内存，使用delete
+对NULL使用delete是可以的，但什么也不会发生
+
+不能使用sizeof确定动态数组的字节数
+
+对数组名使用sizeof得到的是数组长度，对指针使用得到的是指针的长度，即使指针指向一个数组
+
+对数组名使用&运算符，得到的是整个数组的地址
+int a[10];
+cout << a << endl;
+cout << &a << endl;
+这两个值相同，但a+1将把地址增加4，而&a+1会把地址增加40
+&a的类型是int(*)[10]，它指向包含10个元素的int数组
+
+可以声明这样的指针
+int (*pa)[10] = &a;
+*pa与a等价，(*pa)[0]为数组a的第一个元素
+
+自动变量存储在stack中，stack是后进先出的
+
+heap是C语言和操作系统的术语
+heap是操作系统所维护的一块特殊内存，它提供了动态分配的功能，当运行程序调用malloc()时从中分配，调用free()时把内存交还
+
+free store是C++中通过new与delete动态分配和释放对象的抽象概念
+大多数时候，编译器使用malloc()和free()完成new和delete的工作
+因此free store有时和heap是重叠的
+
+auto可以推断出正确的类型
+const antarctiac_years_end ** ppa = arp;
+auto ppb = arp;
+
+模板类vector
+位于头文件vector中，且包含于名称空间std中
+vector<int> vi;	//创建一个大小为0的int数组
+int n = 5;
+vector<double> vd[n];	//创建一个大小为n的double数组
+vi是一个vector<int>对象，vd[i]是一个vector<double>对象
+
+模板类array
+位于头文件array中，且包含于名称空间std中
+array对象的长度是固定的，使用stack而不是free store
+array<int, 5> ai;	//创建一个大小为5的int数组
+array<double, 4> ad = {1.2, 2.1, 3.1, 1.3};
+和数组一样，大小不能是变量
+
+数组、vector对象和array对象均可以用标准数组表示法访问各个元素
+vector对象存储在free store中，而数组和array对象存储在stack中
+可以将array对象赋给另一个array对象，前提是大小相等
+
+int a1[4];
+a1[-2] = 0;	//等价于*(a1-2) = 0;
+C++不检查越界错误，对于array对象，可以继续编写不安全的代码，或者使用成员函数at()
+array<int, 4> a2;
+a2.at(1) = 0;	//a2[1] = 0
+使用at()时，将在运行期间捕获非法索引，并默认中断程序
+成员函数begin()和end()可以确定边界
+
+for的测试表达式结果将被强制转换为bool型
+cout在显示bool值之前转换为int，但cout.setf(ios::boolalpha)调用设置了一个标记，标记命令cout显示true和false
+
+for的规则为
+for(for-init-statement condition; expression)
+因为statement有自己的分号，这时可以在初始化部分声明变量而无需借助"声明语句表达式"的概念
+
+完整表达式是一个序列点
+序列点的概念难以用于讨论多线程，故C++11使用术语"顺序"
+
+string对象不使用空字符来标识字符串的末尾
+
+clock()返回程序执行后所用的系统时间，在ctime头文件中
+CLOCKS_PER_SEC等于每秒包含的系统时间单位数
+类型为clock_t
+
+for遍历数组或容器类
+double prices[5] = {4.9, 10.3, 6.8, 7.4};
+for(double x : prices)
+    cout << x << std::endl
+如果要修改数组的元素，需要使用不同的语法
+for(double &x : prices)
+    x = x*0.8;
+&表明x是一个引用变量
+
+可以直接使用复合字面量
+for(int x : {1, 2, 3, 4, 5})
+    cout << x;
+
+用cin读取char值时，cin将忽略空格和换行符
+
+cin.get(ch)
+要修改ch的值，只需要函数将参数声明为引用类型
+
+当cin出现在需要bool值的地方时，将调用一个转换函数将cin对象转换成bool值，如果最后一次读取成功，则转换的bool值为true，否则为false
+while(cin)
+由于cin.get(char)的返回值为cin，可以精简为
+while(cin.get(ch))
+
+类似getchar()，不接受参数的cin.get()返回输入中的下一个字符
+ch = cin.get();
+同样，cout.put()的工作方式类似putchar()
+cout.put(ch);
+
+遇到EOF时，cin.get()将返回EOF，EOF在iostream中定义，通常为-1
+cin.get(char)在到达EOF时，不会将一个值赋给ch
+
+cin无法识别枚举类型，因此要求输入一个整数，在switch语句中将枚举量提升为int再进行比较
+同样，在while测试条件中也是如此
+
+在使用cin读取到char数组时，将在遇到空白时自动在末尾添加空字符
+使用cin.getline(word, num)时，将换行符丢弃，自动在末尾添加空字符，输入队列的下一个字符是下一行的第一个字符
+
+ostream.setf()方法可以设置各种格式化状态
+
+文件输出需要头文件fstream，内含用于处理输出的ofstream类和ofstream对象，同样，在名称空间std中
+要将ofstream对象和文件关联，方法之一是使用open()方法，结束后应使用方法close()将文件关闭
+
+虽然iostream提供了预先定义好的名为cout的ostream对象，但需要自己声明一个ofstream对象并命名，将其与文件关联起来
+ofstream outFile;
+outFile.open("fish.txt");
+
+当声明了一个ofstream对象并将其同文件关联起来后，可以对其使用所有用于cout的操作和方法
+outFile << 15;
+outFile << "abc" << endl;
+默认情况下，open()将把原文件的长度截为0
+
+fstream类成员函数open()的原型
+void open(const char* filename, int mode, int access);
+mode是要打开文件的方式
+access是打开文件的属性
+打开文件的方式在类ios(是所有流式I/O类的基类)中定义.
+常用的值如下：
+　　ios::app：　　　以追加的方式打开文件
+　　ios::ate：　　　 文件打开后定位到文件尾，ios:app就包含有此属性
+　　ios::binary：   　以二进制方式打开文件，缺省的方式是文本方式。两种方式的区别见前文
+　　ios::in：　　 　  文件以输入方式打开(文件数据输入到内存)
+　　ios::out：　　 　文件以输出方式打开(内存数据输出到文件)
+　　ios::nocreate：  不建立文件，所以文件不存在时打开失败
+　　ios::noreplace：不覆盖文件，所以打开文件时如果文件存在失败
+　　ios::trunc：　　 如果文件存在，把文件长度设为0
+可以用或把以上属性连接起来，如ios::out | ios::binary
+
+ifstream和ofstream类似，必须自己声明一个ifstream对象，并与文件关联
+
+可以使用get()方法读取一个字符或者使用getline()方法读取一行字符
+
+当ifstream对象本身被用作测试条件时，如果最后一个读取操作成功，将被转换为true
+
+如果试图打开一个不存在的文件用于输入，将导致后面使用ifstream对象进行输入时失败
+
+检查文件是否被成功打开可以使用方法is_open()
+if(!inFile.is_open())
+    exit(EXIT_FAILURE);
+函数exit()在cstdlib中定义
+
+如果最后一次读取数据时遇到了EOF，eof()方法将返回true
+如果遇到了EOF或者类型不匹配，fail()方法将返回true
+如果文件受损或硬件故障，bad()方法将返回true
+在没有任何错误时，good()方法返回true
+
+inFile >> value的结果为inFile，在需要一个bool值的情况下，inFile的结果为inFile.good()
+因此可以写作
+while(inFile >> value){}
+
+返回值不能是数组，但可以是对象，因此可以将数组作为结构或对象的组成部分来返回
+
+C++在不指定参数列表时应使用省略号...
+void say(...);
+一般仅当与接受可变参数的C函数如printf()交互时才需要这样做
+
+argument表示实参，parameter表示形参
+
+可以用数组的首地址和尾地址标识数组长度，即指定元素区间
+first, end分别为a, a+sizeof(&a)时，注意end指针指向数组最后一个元素的后一个位置
+
+字符串地址是首字符的地址
+
+带array模板类参数的函数原型
+void show(std::array<double, 4> da);
+void fill(std::array<double,4> *pa);
+
+在C中，main()可以调用自己，但在C++中不允许
+
+函数名即函数的地址
+声明函数指针应包括函数类型和函数参数类型
+double pam(int);
+double (*pf)(int);
+pf是一个函数指针，指向一个double类型，且有一个int参数的函数
+用*pf替换pam，*pf是一个函数
+
+在调用函数时，函数指针pf和(*pf)等价
+double pam(int);
+pf = pam;		//因此应该像使用pam那样使用pf
+double (*pf)(int);	//因此应该像使用pam那样使用(*pf)
+
+在复杂的函数指针声明中可使用自动类型推断
+auto p1 = f1;
+
+然而，auto只能用于单值初始化，不能用于初始化列表
+const double * (*pa[3])(const double *, int) = {f1, f2, f3};
+但声明数组pa后，可以声明同样类型的数组
+auto pb = pa;
+且pa、pb均为指向函数指针的指针
+
+可以继续声明指向函数指针数组的指针
+auto pc = &pa;
+pc指向一个数组，数组里有3个函数指针，每个函数指针指向一个返回值为const double *，参数为const double *和int的函数
+可以写出自己的声明
+const double *(*(*pd)[3])(const double *, int) = &pa
+函数返回第一个参数
+
+既然pd指向数组，那么*pd就是数组，(*pd)[i]是数组中的元素，即函数指针
+函数调用如下
+(*pd)[i](av, 3);
+(*(*pd)[i])(av, 3);
+返回的指针指向的值如下
+*(*pd)[i](av, 3)
+*(*(*pd)[i])(av, 3)
+
+内联函数
+在函数声明和定义前加上关键字inline
+执行内联函数时，编译器使用函数代码替换了函数调用，提高运行速度，但需要更多的内存
+内联函数通常省略原型，前置函数定义
+请求将函数作为内联函数时，编译器不一定会满足该要求
+内联函数不能递归
+
+内联函数往往只有一行
+inline double square(double x){ return x * x; }
+
+引用是已定义的变量的别名，引用变量是一种复合类型
+将引用变量作为参数，函数将使用原始数据而不是其副本
+int rats;
+int& rodents = rats;
+int&是指向int的引用
+引用必须在声明时初始化，不能先声明再赋值，更接近const指针
+int& rodents = rats;
+int* const pr = &rats;
+rodents相当于*pr
+
+在函数形参中使用引用，实质是在函数调用时使用实参初始化形参，而形参是一个引用变量，从而，在这个函数中形参成为了实参的一个别名
+
+常量引用
+int cube(const int& a);
+如果试图改变实参的值，将生成错误消息
+然而，如果参数是基本数据类型，一般来说应该采用按值传递的方式
+在传递的参数比较大的时候，如结构和类，传递const引用会很有用
+
+引用是一个变量的别名，因此如果采用按引用传递参数的方式，不能像下面那样
+cube(15);
+cube(x+15);
+这相当于
+int& a = 15;
+int& a = x+15;
+但不总是这样，当引用参数是const时，情况有所不同
+
+如果实参与引用参数不匹配，但引用参数是const，且是以下两种情况，C++将生成临时变量
+1. 实参的类型正确，但不是左值
+2. 实参的类型不正确，但可以转换为正确的类型
+左值是可被引用的数据对象，如变量，数组元素，结构成员，引用，以及解引用的指针都是左值
+非左值包括字面常量，用引号括起的字符串字面量除外，因为它们由其地址表示
+
+1的情况和下面类似
+int edge = 5;
+int& edg = edge+1;
+不能为edge+1创建引用，edge+1不是一个变量
+
+2的情况和下面类似
+long edge = 5L;
+int& edg = edge;
+不能为edge创建引用，因为类型不正确，int引用不能指向long
+
+在以上情况下，编译器将生成一个临时匿名变量，并让edg指向它，这些临时变量只在函数调用期间存在
+
+void swapr(int& a, int& b){
+    int c = a;
+    a = b;
+    b = c;
+}
+long m = 1, n = 2;
+swapr(a, b);
+由于类型不匹配，编译器将创建两个临时的int变量，并初始化为1和2，然后交换这两个临时变量，而m和n保持不变
+对于const引用，由于在函数调用期间禁止改变形参，如果只是为了在函数中使用传递的值而非修改它们，临时变量不会造成不利影响
+也就是说，对于形参为const引用的函数，如果实参不匹配，其行为类似于按值传递
+
+&&右值引用
+double&& rref = std::sqrt(36.00);
+double j = 15.0;
+double&& jrref = 2.0*j+18.5;
+ref的值为6.0，jref的值为48.5
+
+返回引用
+int& accumulate(int& a, int b);
+accumulate(accumulate(team, one), two);
+等价于
+accumulate(team, one);
+accumulate(team, two);
+返回引用还可以将值赋给函数调用，因为函数的返回值是一个引用
+accumulate(team, three) = four;
+相当于
+accumulate(team, three);
+team = four;
+第二条语句消除了第一条语句所做的工作
+
+返回值时将把值复制到一个临时位置，再进行赋值
+double a = sqrt(16.0);
+返回引用时将直接把team赋值给dup，效率更高
+dup = accumulate(team, five);
+
+返回引用时避免返回指向临时变量的引用，正如避免返回指向临时变量的指针
+
+const free_throws & clone(free_throws& ft){
+    free_throws* pt = new free_throws;
+    *pt = ft;
+    return *pt;
+}
+关于返回引用的函数，从表面上看应该返回new创建的新变量，但函数声明表明，实际返回的是这个结构*pt的引用
+该函数隐藏了对new的调用，注意不要忘记使用delete释放内存
+
+将const用于引用返回类型，避免要使用引用返回值的时候不慎给函数调用赋值
+
+通常将类对象的引用传递给函数
+
+ostream类是基类，ofstream类是派生类
+
+基类引用可以指向派生类对象，无需进行强制类型转换
+一个效果是，定义一个接受基类引用参数的函数，调用该函数时，可以将派生类对象作为参数
+参数类型为ostream&的函数可以接受ostream对象或ofstream对象作为参数
+
+默认参数
+char* left(const char* str, int n = 1);
+n的默认值为1
+必须从右向左添加默认值，如果要为某个参数设置默认值，必须为它右边的所有参数提供默认值
+
+调用函数时，实参从左到右给形参初始化，不能跳过任何参数，如
+beeps = harpo(3, ,8);
+这并不能使第二个参数为默认值，调用是无效的
+
+注意，函数定义不变，仅有函数原型指定了默认值
+
+函数重载
+函数的特征标相同，即函数参数的数目和对应类型相同，且参数的排列顺序相同，参数名无关紧要
+使用重载函数时应使用正确的参数，如果参数类型不对，C++会尝试使用强制类型转换进行匹配，但这要求只有唯一的"合适的"函数原型
+如果参数通过强制类型转换可以与多个函数原型相匹配，这种函数调用将被视为错误
+
+有一些看上去不一样的特征标不能共存，如
+double cube(double x);
+double cube(double& x);
+当调用cube(x)时，参数x与两个原型都匹配，编译器无法确定应使用哪个原型
+因此，在检查特征标时，类型引用和类型本身被视为同一个特征标
+
+匹配函数时，编译器会根据const变量做出选择
+void dribble(char* bits);
+void dribble(const char* cbits);        //重载
+
+函数重载的关键是特征标而非函数原型
+long gronk(int n, float m);
+double gronk(int n,float m);
+调用函数时编译器无法确定应使用哪个原型
+
+当重载函数使用引用参数时，调用函数将调用最匹配的版本
+void stove(double& r1);
+void stove(const double& r2);
+void stove(double &&r3);
+double x = 1.0;
+const double y = 2.0;
+stove(x);            //r1
+stove(y);            //r2
+stove(x+y);        //r3
+由于const左值引用可以接受右值参数，在没有第三个版本的情况下，stove(x+y)调用第二个版本
+
+有时可以用默认参数代替两个重载函数，但当参数的类型不同时，默认参数便不管用了
+
+名称修饰，即编译器内部跟踪重载函数时，给各重载函数名加密
+
+函数模板
+template <typename AnyType>
+void Swap(AnyType &a, AnyType &b)
+{
+    AnyType temp;
+    temp = a;
+    a = b;
+    b = temp;
+}
+第一行表明要建立一个模板，并将类型命名为AnyType
+这里关键字template和typename是必须的，除非可以使用class代替template，另外，必须使用尖括号
+类型名可以任意选择
+余下的代码描述了交换两个AnyType值的算法
+模板不创建函数，只是告诉编译器如何定义函数
+
+在C++98之前，使用class代替尚未添加的关键字typename
+template <class AnyType>
+
+模板函数的原型
+template <typename T>
+void Swap(T& a, T& b);
+更常见的情形是将原型放在头文件中
+
+也许不是所有的类型都使用相同的算法，可以像重载函数一样重载模板，被重载的模板的函数特征标必须不同
+并非所有的模板参数都必须是模板参数类型，也可以是具体类型
+template <typename T>
+void Swap(T& a, T& b);
+template <typename T>
+void Swap(T* a, T* b, int n);    //模板重载
+
+模板函数假定可执行哪些操作，但地址值相乘或者结构体比较大小是不成立的，一种方式是运算符重载，另一种方式是为特定类型提供具体化的模板定义
+
+显式具体化
+template <>
+void Swap<job>(job&, job&);
+Swap<job>中，<job>是可选的，即可以写成
+template <>
+void Swap(job&, job&);
+
+对于任一函数名，可以有非模板函数，模板函数，显式具体化模板函数及它们的重载
+显式具体化原型和定义应以template<>开头，并通过名称指出类型
+非模板函数优先级高于具体化，具体化优先级高于模板
+
+显式实例化
+可以直接命令编译器创建特定的实例，如Swap<int>，而不需要等待程序调用Swap()，语法如下，用<>指示类型，并加上关键字template
+template void Swap<int>(int, int);
+
+注意显式具体化和显式实例化的区别，显式具体化在template后加上<>
+显式具体化的意思是，不要使用Swap()模板生成函数定义，而应使用专为int显式定义的函数定义
+显式实例化的意思是，使用Swap()模板生成一个使用int类型的实例
+
+不允许在同一个文件或转换单元中使用同一类型的显式实例和显式具体化
+
+函数调用创建显式实例化
+template <class T>
+T Add(T a, T b) {return a + b};
+int m =6;
+double x = 10.2;
+cout << Add<double>(x, m) << endl;
+由于m和x的类型不同，函数调用Add(x, m)与模板不匹配，这里强制为double类型实例化，并将m强制类型转换为double类型，以便与Add<double>(double, double)匹配
+
+对Swap()做类似的处理并不管用，因为虽然Swap<double>(x, m)生成了一个显式实例化，形参类型为double&，不能指向int变量m
+
+重载解析
+当遇到函数调用时，编译器进行下面三步操作
+1. 创建候选函数列表，表中包含名称相同的函数和模板函数
+2. 创建可行函数列表，表中都是参数数目正确的函数，其中有实参类型与形参类型完全匹配的情况，也包括隐式转换序列，如使用float实参的函数调用可以将参数转换为double，从而与double形参匹配
+3. 确定最佳的可行函数，如果有，则使用它，否则该函数调用出错
+
+在确定可行函数时，最佳到最差的顺序如下
+完全匹配，此时常规函数优先于模板
+提升转换，如char和short自动转换为int，float自动转换为double
+标准转换，如int转换为char，long转换为double
+用户自定义转换，如类声明中定义的转换
+
+完全匹配允许某些无关紧要的转换，如int实参与int&形参完全匹配，反之也成立，此外还包括函数名与函数指针，只要它们的返回类型和参数列表相同，就是匹配的
+Type类型的实参与const Type，volatile Type类型的形参都是完全匹配的
+Type*类型的实参与const Type*，volatile Type*类型的形参都是完全匹配的
+
+通常，有两个函数完全匹配是错误，但有两个例外
+一种情况是，是非const指针和非const引用优先与非const参数匹配，尽管存在可以完全匹配的const参数，然而，只限于指针和引用，对于其他变量而言，出现const和非const两种完全匹配的函数是二义性错误
+另一种情况是，非模板函数与模板函数都完全匹配，使用非模板函数
+在模板函数之间，显式具体化模板优先于隐式具体化模板
+
+同为显式具体化模板或隐式具体化模板，其中较具体的优先，这里的具体指编译器推断使用哪种类型是执行的转换最少，如
+template<class Type>void recycle(Type t);
+template<class Type>void recycle(Type* t);
+struct blot ink = {25, "spots"};
+recycle(&ink);
+函数调用与这两个模板都匹配，第一个模板将Type解释为blot*，实例为recycle<blot*>(blot*)，第二个模板将Type解释为blot，实例为recycle<blot>(blot*)，这两个均为可行函数，此时，后者被认为是更具体的，因为后者的参数指出Type是一个指针，可以直接用blot标识Type，前者则必须将Type解释为指向blot的指针
+也就是说，第二个模板中，Type已经被具体化为指针，因此说它更具体
+
+同样，对于一个数组类型，如果假定了数组元素的类型，则被认为是更具体的
+
+当使用函数调用进行模板的显式实例化时，尽管有匹配的非模板函数，仍然选择模板函数
+cout << lesser<>(m, n) << endl;
+上面lesser<>(m, n)中的<>指出，编译器应选择模板函数
+
+带多个参数的函数的匹配，一个函数要比其他函数都更合适，要求其所有参数的匹配程度都必须不比其他函数差，同时至少有一个参数的匹配程度比其他函数都高
+
+在C++98中，编写模板函数时，并非总能知道应在声明中使用哪种类型，原因之一是可能存在的强制类型转换
+C++11的decltype关键字
+int x;
+decltype(x) y;    //使y的类型与x相同
+给decltype提供的参数可以是表达式
+decltype(x+y) xpy = x+y;
+
+实际上decltype要复杂些，为确定类型，编译器必须遍历一个核对表，简化如下
+decltype(expression) var;
+如果expression是一个不被括号括起的标识符，则var的类型与该标识符的类型相同，包括const等限定符
+如果expression是一个函数调用，则var的类型与函数的返回类型相同，但并不会实际调用函数
+如果expression是一个用括号括起的左值，则var为指向其类型的引用
+如果前面的条件都不满足，则var的类型与expression的类型相同
+
+C++11后置返回类型
+decltype很好用，但无法解决函数返回值的问题，由于参数列表还未给出(在后面)，无法使用decltype指定函数返回类型
+double h(int x, float y);
+使用后置返回类型可以写成这样
+auto h(int x, float y) -> double;
+这种语法也可用于函数定义
+auto h(int x, float y) -> double
+{/* function body */};
+->double称为后置返回类型，auto为占位符
+
+现在可以使用decltype指定函数返回类型
+template<class T1, classT2>
+auto gt(T1 x, T2 y) -> decltype(x+y)
+{
+    ...
+    return x+y;
+}
+
+不应将函数定义和变量声明放在头文件，头文件通常包含函数原型，#define或const定义的符号常量，结构声明，类声明，模板声明和内联函数
+
+C++中将const用于外部变量，将设置该变量的链接性为内部链接
+但可以用extern显式覆盖掉const对该变量的链接性的设置
+extern const int states = 50;
+
+必须同时在原型和函数定义中使用static，使函数的链接性为内部的
+
+一个函数的所有内联定义必须都相同
+
+如果用到C库函数，可以用函数原型指出要链接的函数
+extern "C" void spiff(int);
+下面两个则分别通过默认和显式指出使用C++语言链接性
+extern void spiff(int);
+extern "C++" void spiff(int);
+
+new失败时引发异常std::bad_alloc
+
+void* operator new(std::size_t)
+是new调用的分配函数
+void* operator new[](std::size_t)
+是new[]调用的分配函数
+void operator delete(void *)
+是delete调用的释放函数
+void operator delete[](void *)
+是delete[]调用的释放函数
+这些函数位于全局名称空间，std::size_t是一个typedef，对应于合适的整型
+如
+int* p = new int;
+被转换为
+int* p = new(sizeof(int));
+而
+int* pa = new int[40];
+被转换为
+int* pa = new(40 * sizeof(int));
+
+这些函数是可替换的，可以定义作用域为类的替换函数，以满足该类的内存分配需求，在代码中使用new运算符时将调用自定义的new()函数
+
+定位new特性，要包含头文件new
+定位new除了需要指定参数外，句法与常规new运算符相同
+char buffer1[50];
+char buffer2[500];
+p1 = new(buffer1) chaff;	//chaff是一个struct
+p2 = new(buffer2) int[20];
+上述代码从buffer1中分配空间给chaff，从buffer2中分配空间给int数组
+
+p3 = new(buffer1) chaff;
+重复使用定位new分配同一个地址时，new不跟踪哪些单元已经被使用，例如p3和p1的地址是相同的，程序员应自己计算偏移量
+
+另外，delete只能用于常规new分配的堆内存，上述的buffer1和buffer2位于静态内存或栈中，使用delete将引发运行阶段错误
+
+默认定位new返回传递给new的地址，并强制转换为void*
+标准定位new调用一个接收两个参数的new()函数
+int* p1 = new int;		//调用new(sizeof(int))
+int* p2 = new(buffer) int;	//调用new(sizeof(int), buffer)
+int* p3 = new(buffer) int[40];	//调用new(40 * sizeof(int), buffer)
+定位new函数不可替换，但可重载，至少需要两个参数，第一个总是std::size_t
+
+名称空间可以是全局的或位于另一个名称空间中，但不能位于代码块中
+默认情况下名称空间中声明的名称是外部链接的，除非它引用了常量
+
+全局名称空间对应于文件级声明区域，全局变量位于全局名称空间中
+
+namespace Jill{
+    char* goose(const char*);
+}
+上述语句将名称goose添加到Jill中
+namespace Jack{
+    void fetch();
+}
+上述语句将名称fetch添加到Jack中，可以在该文件后面或者另一个文件中再次使用Jack名称空间提供fetch()函数的代码
+
+作用域解析运算符::可以访问名称空间中的名称
+未被装饰的名称称为未限定的名称
+
+using声明和using编译指令可以简化名称空间中名称的使用
+using声明使特定的标识符可用，using编译指令使整个名称空间可用
+using Jill::goose;
+
+using声明将特定的名称添加到声明所属的声明区域中，如下，main()中的using声明Jill::fetch将fetch添加到main()定义的声明区域中
+char fetch;
+int main(){
+    using Jill:fetch;
+    double fetch;		//错误
+    std::cin >> fetch;		//Jill::fetch
+    std::cin >> ::fetch;	//global fetch
+}
+
+using namespace Jill;
+将Jill中所有的名称添加到编译指令所属的声明区域中，但如果该声明区域存在名称空间内的名称，将隐藏名称空间名，就像局部变量隐藏同名的全局变量一样
+
+嵌套名称空间
+可以在名称空间里用using编译指令和using声明
+将using编译指令用于外层名称空间，相当于同时用于内层的所有名称空间
+
+可以给名称空间创建别名
+namespace my_very_favorite_things{...};
+namespace mvft = my_very_favorite_things;
+可以用这种技术简化嵌套名称空间
+namespace MEF = myth::elements::fire;
+using MEF::flame;
+
+省略名称空间的名称可以创建未命名的名称空间
+namespace{
+    int ice;
+    int bandycoot;
+}
+这就像后面跟着using编译指令一样，即未命名名称空间的潜在作用域为从声明点到声明区域末尾（即文件末尾），但由于没有名称，无法在其他声明区域使用using指令或声明，这提供了内部链接的静态变量的替代品
+
+定义位于类声明中的函数都自动成为内联函数
+在类声明之外使用inline限定符可以定义内联成员函数
+
+内联函数要求在每个使用它们的文件中都对其进行定义
+
+构造函数和类同名
+
+Stock first();
+调用默认构造函数时，不要写圆括号，那会被认为是一个函数原型
+Stock second;
+Stock third(1, 2, 3);
+
+可以用重载或默认参数的方式提供默认构造函数，只有当不存在非默认构造函数时，编译器才会提供默认构造函数
+
+析构函数为类名前加~，且不带参数，析构函数的原型必须如下
+~Stock();
+
+构造函数和析构函数没有声明类型，没有返回值
+
+要让方法无法修改对象，在方法的声明和定义后面加上const
+void show() const;
+void stock::show() const{}
+这实际上是将this指针限定为const，从而不能使用this来修改对象的值
+
+列表初始化
+Stock first = {1, 2, 3};
+Stock second{1, 2, 3};
+Stock *p = new Stock{1, 2, 3};
+
+如果构造函数只有一个参数，可以如下初始化
+Stock first = Stock(1);
+Stock second(2);
+Stock third = 3;
+
+如果构造函数使用了new，则必须提供使用delete的析构函数
+
+对象数组的构造函数初始化
+Stock stocks[3] = {
+    Stock(1, 2),
+    Stock(2, 3),
+    Stock(1, 3),
+};
+如果类包括多个构造函数，可以对不同的对象使用不同的构造函数
+Stock stocks[5] = {
+    Stock(1, 2, 3),
+    Stock(2, 3),
+    Stock(),
+};
+只初始化了部分元素，剩下的2个元素将使用默认构造函数初始化
+
+声明类只是描述了对象的形式，并没有创建对象，因此在类中没有存储值的空间，12不能被存储
+class Stock{
+    private:
+        const int Months = 12;
+        double costs[Months];
+}
+C++11提供了成员初始化，但不适用于以上的数组声明
+解决方法一是声明一个枚举，类声明中声明的枚举的作用域为整个类，可以用枚举作为整型常量作为类的符号名称
+class Stock{
+    private:
+        enum {Months = 12};
+        double costs[Months];
+}
+这种方式声明枚举并不会创建类数据成员，即对象中不包含枚举，故不需要提供枚举名
+ios_base类中应用了此种方法，fixed就是ios_base类中定义的枚举量
+
+使用关键字static可以在类声明中创建常量
+class Stock{
+    private:
+        static const int Months = 12;
+        double costs[Months];
+}
+Months将与其他静态变量存储在一起，而不是存储在对象中，该常量被所有对象共享
+
+作用域内枚举
+enum class egg{small, medium, large, jumbo};
+可以用struct代替class
+需要用枚举名限定枚举量
+egg choice = egg::large;
+
+常规枚举可以在表达式中隐式转换为整型，但作用域内枚举不行
+常规枚举的底层整型是什么取决于实现，但作用域内枚举的底层类型为int
+但可以重新指定为其他的类型，语法如下
+enum class : short egg{small, medium};
+:short将底层类型指定为short
+
+运算符重载
+Time operator+(Time b);
+可以像调用普通方法那样调用operator+()
+Time a, b;
+a.operator+(b);
+也可以用运算符表示法
+a+b;
+这种情况下，运算符左边的对象为调用对象，右边的对象被作为参数传递
+
+运算符重载的限制
+运算符重载要求至少有一个操作数是自定义类型的类对象
+运算符重载后的操作数个数必须相同
+不能创建新运算符
+运算符重载后的结合性不变
+运算符重载后的优先级不变
+运算符重载函数不能有默认参数
+
+不能重载下列运算符
+sizeof运算符	sizeof()
+成员运算符	.
+成员指针运算符	.*
+作用域解析运算符	::
+条件运算符	?:
+RTTI运算符	typeid
+强制类型转换运算符	const_cast	dynamic_cast	reinterpret_cast	static_cast
+
+以下运算符只能通过成员函数重载
+赋值运算符
+函数调用运算符	()
+下标运算符	[]
+指针访问运算符	->
+
+//todo
+C++17的std::invoke()
+
+友元函数
+将函数原型放在类声明中，并加上关键字friend
+friend Time operator*(double m, Time& t);
+友元函数不是类成员函数，不能通过成员运算符调用，也不要使用Time::限定符，但它与成员函数的访问权限相同
+函数定义中不要使用friend
+Time operator*(double m, Time& t){
+    Time result;
+    result.hours = t.hours;
+    return result;
+}
+
+通过成员函数，下面的语句
+A = 2.75*B;
+转换为
+A = operator(2.75, B);
+
+通过类成员函数重载运算符时，类成员函数只有一个参数，因为this指针是隐藏的"第一个参数"（实际上存放在ECX寄存器中，为最后一个入栈的参数）
+
+重载<<
+使用友元函数如下
+void operator<<(ostream& os, const Time& t){
+    os << t.hours << " hours, " << t.minutes << " minutes";
+}
+这样可以使用下面的语句
+cout << trip;
+调用cout << trip应使用cout对象本身，而不是拷贝，因此函数按引用传递参数，os将成为cout的别名
+cerr << trip;
+同样，os此时是cerr的别名
+
+上述方法无法实现连续调用，由于函数的类型是void而不能返回ostream对象
+事实上，ostream类将operator<<()函数实现为返回一个指向ostream对象的引用，从而可以如下使用cout
+cout << x << y;
+
+可以对友元函数采用同样的方法
+ostream& operator<<(ostream& os, const Time& t){
+    os << t.hours << " hours, " << t.minutes << " minutes";
+    return os;
+}
+
+这个operator<<()版本还可以用于将输出写入文件，类继承属性让ostream引用能够指向ostream对象和ofstream对象
+
+当友元函数的定义同时也是原型时，如内联函数，应使用friend
+
+重载运算符时，友元函数和类成员函数二者只能选其一，因为两个原型都和重载的运算表达式匹配，即使一个操作数在类成员函数中通过this隐式传递
+
+只有接受一个参数或只接受一个非默认参数的构造函数才能作为转换函数
+Stonewt(double libs);
+Stonewt myCat;
+myCat = 19.6;
+这种情况下的类型转换是隐式的
+
+关键字explicit用于关闭这种初始化方式，但仍然允许显式的强制类型转换
+explicit Stonewt(double libs);
+Stonewt myCat;
+myCat = 19.6;		//无效
+myCat = Stonewt(19.6);	//正确的初始化，显式的类型转换
+myCat = (Stonewt)19.6;	//旧式的类型转换
+
+没有使用explicit时，隐式类型转换可用于以下情况
+将Stonewt对象初始化为double值时
+将double值赋给Stonewt对象时
+将double值传递给接受Stonewt参数的函数时
+返回值为Stonewt对象的函数返回double值时
+在以上情况下，使用可转换为double类型的内置类型时
+
+上述最后一种情况可能如下，int先转换成double，再转换成Stonewt
+Stonewt myCat(700);
+myCat = 7000;
+但只有转换不存在二义性时，才会进行这样的的二步转换，如果类还定义了构造函数Stonewt(long)，将不支持这样的转换，因为int可被转换为long或double
+
+转换函数
+用于将类类型转换为某种内置类型
+operator typeName();
+转换函数必须是类方法，且不能指定返回类型，不能有参数
+如
+operator double();
+虽然不指定返回类型，但需要有返回值，typeName就是返回值类型
+
+自动转换为整数的对象可以用作数组索引
+explicit同样用于转换函数，从而避免隐式类型转换
+
+另一种方式是用功能相同的非转换函数替换转换函数
+int Stonewt::Stone_to_Int(){}
+
+同时存在typeName的转换函数和接受一个typeName参数的构造函数时，重载运算符可能出现问题，正如友元函数和成员函数的运算符重载不能同时存在
+double kennyD = 15.0;
+total = jennySt, + kennyD;
+一种解释是运算符重载
+total = operator+(jennySt, kennyD);
+另一种解释是jennySt转换为double并执行double加法，然后构造函数接受二者的和作为参数创建一个新的对象，并将其赋给total
+
+不可能对一个基本类型使用成员运算符，即使存在接受一个该类型参数的类构造函数，只有类对象才可以调用成员函数
+将运算符重载为友元函数可以让程序更容易适应自动类型转换
+
+不能在类声明中初始化静态成员变量，因为类声明没有分配内存，但如果静态成员变量是const int类型，则允许在类声明中直接初始化
+private:
+    static const int i = 40;
+除此之外的情况，初始化应位于源文件中，避免重定义
+
+StringBad sailor = sports;
+当使用一个对象初始化另一个对象时，编译器自动生成复制构造函数，原型如下
+StringBad(const StringBad&);
+然后使用该构造函数初始化对象
+StringBad sailor = StringBad(sports);
+
+如果参数是按值传递而非按引用传递的，调用函数可能出错
+例如，假定在构造函数中使用new分配内存，由对象的实例属性保存这个指针，并在析构函数中使用delete释放
+此时调用函数自动构造了一个对象，并用实参初始化它，那么，在函数调用结束时，自动析构该临时对象将造成内存的释放
+
+如果没有定义，当要用到时，编译器将自动生成以下函数或运算符的定义
+默认构造函数，只有在未定义构造函数时
+默认析构函数
+复制构造函数
+赋值运算符
+地址运算符
+
+C++11提供的两个特殊成员函数
+移动构造函数
+移动赋值运算符
+
+带参数的构造函数也可以是默认构造函数，只要所有参数都有默认值，但只能有一个默认构造函数
+
+复制构造函数用于将一个对象复制到新创建的对象中，用于初始化和按值传递参数而不是常规的赋值过程，它接受一个指向对象的常量引用作为参数
+StringBad(const StringBad &);
+以下4种声明都将调用复制构造函数
+StringBad ditto(motto);
+StringBad metoo = motto;
+StringBad also = StringBad(motto);
+StringBad* pStringBad = new StringBad(motto);
+在这4种情况中，中间的2种声明可能直接使用复制构造函数创建metoo和also，也可能使用复制构造函数生成临时对象，然后将临时对象赋给metoo和also，取决于实现，最后一种声明初始化一个匿名对象，并将对象的地址赋给pStringBad
+当程序生成了对象副本时，也使用复制构造函数，包括按值传递对象或函数返回对象时
+生成临时对象时，也使用复制构造函数，如当3个vector对象相加时，编译器可能生成临时的vector对象以保存中间结果
+
+默认复制构造函数逐个复制非静态成员，复制的是成员的值，也称为浅复制
+如果成员本身就是类对象，则将使用这个类的复制构造函数来复制成员对象
+静态函数不受影响
+
+自动的类重载赋值运算符的原型如下
+Class_name& Class_name::operator=(const Class_name&);
+接受并返回一个指向类对象的引用
+将已有的对象赋给另一个对象时，使用重载的赋值运算符
+初始化对象时，不一定会使用赋值运算符，可能直接使用复制构造函数初始化新对象，取决于实现
+
+赋值运算符的隐式实现也对非静态成员进行逐个复制，但如果成员本身是类对象，则使用这个类定义的赋值运算符而非复制构造函数来复制该成员
+赋值运算符应当返回一个指向调用对象的引用，这样就可以像常规赋值那样连续进行赋值
+s0 = s1 = s2;
+s0.operator=(s1.operator=(s2));
+类的静态成员函数只能操作类的静态成员，不能操作非静态成员，因此赋值运算符不能是静态成员函数
+目标对象中的指针可能指向之前分配的内存，重载函数应使用delete来释放内存
+由于重载函数可能使用delete，应当避免将对象赋给自身，否则在赋值前释放内存的操作会删除对象的内容
+
+使[]的重载返回对应的引用，这样可以像数组一样赋值
+char& String::operator[](int i)
+{return str[i]};
+String means("might");
+means[0] = 'r';
+
+如果只有以上重载，遇到const时可能会出错
+const String answer("futile");
+cout << means[1];
+因为means是常量，而上述方法可能修改数据
+由于常量函数和非常量函数的特征标不同，可以提供另一个仅供const String对象使用的版本
+const char& String::operator[](int i) const
+{return str[i]};
+
+静态成员函数的原型必须包含static，但独立的定义不能包含static
+静态成员函数不能使用this指针，只能使用静态数据成员
+如果是在公有部分声明的，可以使用类名和作用域解析运算符来调用它
+
+多个构造函数必须以相同的方式使用new，因为只有一个析构函数
+
+用一个对象初始化另一个对象时，一定调用复制构造函数，但可能调用赋值运算符
+如果生成了临时对象，则应该重载赋值运算符
+
+返回对象的几种情况
+
+返回const对象的引用
+如果传入的参数是const对象的引用，当要将这个参数作为返回值时，返回类型也必须是const对象的引用而不能是非const对象的引用
+使用const对象的引用比使用对象的引用效率要高
+
+返回非const对象的引用
+一种情况是重载赋值运算符，这是为了提高效率，防止调用复制构造函数
+另一种情况是重载与ostream对象一起使用的<<运算符，这时必须这样做，因为ostream类没有公有的复制构造函数
+
+返回对象
+这种情况适合算术运算符重载
+
+返回const对象
+如果重载的算术运算符返回对象，如下代码很有创意，但应该避免
+force1 + force2 = net;
+复制构造函数创建一个临时对象来表示返回值，net被赋给该临时对象
+要避免这种情况，可以返回const对象
+
+析构函数被调用的时机
+对象是动态变量，当对象所在的程序块执行完时，调用该对象的析构函数
+静态变量，在程序结束时调用对象的析构函数
+new创建的对象，仅当使用delete删除对象时调用析构函数
+
+定位new
+对于用定位new运算符分配内存的对象，不能使用delete删除对象指针，因为指针没有收到new运算符返回的地址，也不能使用delete(或delete[])删除缓冲区指针，即使对象指针的值和缓冲区指针的值相同，这样也将释放缓冲区，但不会调用对象的析构函数
+应显式调用对象的析构函数
+pc1->~JustTesting();
+
+对一系列使用定位new创建的对象，应按创建顺序相反的顺序调用析构函数进行删除，因为晚创建的的对象可能依赖早创建的对象，当所有对象都被删除后，才能释放用于存储对象的缓冲区
+
+成员初始化列表
+对于类中的const int值qsize，其可以被初始化，但不能被赋值，因此下面的实现行不通
+Queue::Queue(int qs){
+    front = rear = nullptr;
+    qsize = qs;	//qsize是常量
+}
+调用构造函数时，就已经为类成员分配了内存，因此这样的操作被认为是赋值而非初始化
+成员初始化列表中的成员在构造函数体执行前，也即创建对象时就已经分配内存并初始化，因此可以用于const值
+列表由逗号分隔，位于参数列表的右括号后，函数体的花括号前，且用 : 标识
+Queue::Queue(int qs) : qsize(qs), front(nullptr), rear(nullptr), items(2+3*qs)
+{}
+成员初始化列表不仅限于初始化常量，也可以初始化其他变量，但常量和引用必须使用这种方法初始化
+成员初始化列表只能在构造函数使用
+成员初始化列表比在函数体中赋值效率更高
+注意，成员被初始化的顺序与它们出现在类声明中的顺序相同，而与初始化器中的排列顺序无关
+
+C++11提供了类内初始化
+class Classy{
+    int mem1 = 10;
+    const int mem2 = 20;
+}
+这和在构造函数中使用成员初始化列表等价，但如果确实调用使用了成员初始化列表的构造函数，实际列表将覆盖这些默认初始值
+
+将复制构造函数或赋值运算符定义为伪私有方法可以避免自动生成的默认方法定义，也可以避免被调用
+Queue A(B);
+Queue A, B;
+A = B;
+以上的复制和赋值将不被允许，在定义对象不允许复制的类中很有用
+然而，在对象被按值传递或返回时，或需要创建其他的临时对象时，复制构造函数仍会被调用
+C++11提供了使用delete禁用方法的方式
+
+C++11提供了目标构造函数和委托构造函数，对于多个构造函数包含相同代码的情况，可以将这些代码放在目标构造函数中，由其他构造函数在成员初始化列表中调用这个函数，这些构造函数称为委托构造函数
+
+继承
+class RatedPlayer : public TableTennisPlayer{
+...
+};
+冒号表明RatedPlayer类的基类是TableTennisPlayer类
+public表明TableTennisPlayer是一个公有基类
+通过公有继承，公有基类的的公有成员将成为派生类的公有成员，基类的私有成员将成为派生类的一部分，但只能通过基类的公有方法和保护方法访问
+
+构造函数应给继承的成员提供数据，方式为在成员初始化列表中调用基类构造函数
+事实上，派生类的构造函数必须使用基类的构造函数，创建派生类对象时，首先创建基类对象，基类对象在程序进入派生类构造函数前被创建
+RatedPlayer::RatedPlayer(int r, const string& fn, const string& ln, bool ht) : TableTennisPlayer(fn, ln, ht){
+    rating = r;
+}
+
+RatedPlayer::RatedPlayer(int r, const TableTennisPlayer& tp) : TableTennisPlayer(tp){
+    rating = r;
+}
+第二个构造函数调用了基类的复制构造函数
+如果不在成员初始化列表中显式调用基类的构造函数或复制构造函数，将调用基类的默认构造函数
+
+释放对象的顺序和创建的顺序相反，先调用派生类的析构函数，而后自动调用基类的析构函数
+
+派生类对象可以使用基类的公有方法和保护方法
+
+基类指针可以指向派生类对象，基类引用可以引用派生类对象，但基类指针或引用只能用于调用基类方法，不能调用派生类方法
+派生类指针不能指向基类对象，派生类引用不能引用基类对象
+由于这种特性，可以将派生类对象作为基类复制构造函数的参数，也可以作为返回类型为基类对象的函数返回值
+可以直接将派生类对象赋给基类对象，将调用基类的重载赋值运算符
+
+多态公有继承
+virtual
+如果是虚方法，则根据引用或指针指向的对象的类型选择要调用的重载方法，如果没有关键字virtual，则根据引用或指针类型来选择方法
+可以将派生类中会重新定义的方法对应的基类方法声明为虚方法
+基类虚方法在派生类中自动成为虚方法，但仍应该使用virtual显式指出派生类中哪些是虚方法
+
+在派生类方法中，使用作用域解析运算符调用基类方法，如果派生类没有重新定义该方法，也可以不使用作用域解析运算符
+
+将派生类引用或指针转换为基类引用或指针称为向上强制转换，向上强制转换是可传递的
+将基类引用或指针转换为派生类引用或指针称为向下上强制转换，向下强制转换必须通过使用显式类型转换
+
+按值传递会导致只将派生类对象的基类部分传递给函数
+
+编译器对非虚方法使用静态联编
+
+虚函数表
+为每个对象添加一个隐藏成员，其中保存了一个指向函数地址数组的指针，该数组称为虚函数表
+虚函数表存储了为类对象进行声明的虚函数的地址
+例如，基类对象包含一个指针，指向基类中所有虚函数的地址表
+如果派生类提供了虚函数的新定义，虚函数表中将保存新函数的地址，否则保存基类虚函数的地址
+如果派生类定义了新的虚函数，也将被添加到虚函数表中
+
+构造函数不能是虚函数
+析构函数应当是虚函数，除非类不用作基类
+友元不能是虚函数，因为友元不是类成员
+静态成员函数不能是虚函数
+
+重新定义一个特征标不同的虚函数不会生成函数的两个重载版本，而是隐藏基类的版本
+因此，如果重新定义继承的方法，应确保与原来的原型完全相同，例外是返回类型协变，即如果返回类型是基类引用或指针，可以修改为指向派生类的引用或指针
+返回类型协变
+允许返回类型随类类型的变化而变化
+
+如果基类声明被重载了，应该在派生类中重新定义所有的基类版本
+如果只定义一个版本，另外的版本将被隐藏，派生类对象将无法使用它们
+如果不需要修改，则新定义可以直接调用基类版本
+
+纯虚函数的声明为虚函数加上结尾的=0，即只有虚函数允许纯说明符
+当类声明中包含纯虚函数时，不能创建该类的对象，包含纯虚函数的类只用作基类
+抽象基类必须至少包含一个纯虚函数
+
+纯虚函数可以有定义，也可以不定义
+
+继承和动态内存分配
+基类使用动态内存分配，派生类不使用动态内存分配
+不需要为派生类定义显式析构函数、复制构造函数、赋值运算符
+派生类的这些属性对于本身是对象的类成员来说也适用，如包含string对象成员的类，可以不定义上述函数
+
+基类使用动态内存分配，派生类使用动态内存分配
+必须为派生类定义显式析构函数、复制构造函数、赋值运算符，且此时需要显式调用基类的对应函数，将该操作放在成员初始化列表中
+在显式调用基类的赋值运算符时，应该使用作用域解析运算符
+baseDMA::operator=(hs);
+如果使用运算符表示法，将调用派生类的赋值运算符，从而进入无限递归
+*this = hs;		//无限递归
+
+派生类的友元函数可以访问派生类的成员，但如果该函数不是基类的友元，将不能访问派生类中基类的部分，应在派生类的友元函数中调用对应的基类的友元函数
+由于友元不是类成员函数，不能使用作用域解析运算符指出要使用哪个函数，解决方法是调用时使用强制类型转换，以便匹配原型时能选择正确的函数
+
+不被继承的方法
+构造函数，然而C++11提供了继承构造函数的机制
+析构函数
+赋值运算符，赋值运算符的特征标是不同的
+
+如果定义了派生类的赋值运算符，则应在其中显式调用基类的赋值运算符
+
+可以将派生类对象赋给基类对象，只涉及基类成员
+不允许将基类对象赋给派生类对象，除非存在接受基类引用作为参数的转换构造函数，这样将根据基类对象创建一个临时的派生类对象，然后用作赋值运算符的参数
+另一种方法是，定义一个用于将基类赋给派生类的赋值运算符
+
+模板类valarray
+valarray<int> v0;		//长度为0
+valarray<int> v1(5);		//长度为5
+valarray<int> v2(5,10);	//长度为10，初始化为5
+int a[5] = {1, 2, 3, 4, 5};
+valarray<int> v3(a, 3);	//长度为3，用a中的前3个元素初始化v3
+valarray<int> v4 = {1, 2, 3}	//列表初始化
+
+valarray的方法
+operator[]()	//访问各个元素
+size()		//返回包含的元素个数
+sum()		//返回元素的和
+max()
+min()
+
+私有继承
+使用私有继承，基类的公有成员和保护成员都将成为派生类的私有成员，从而基类方法不会成为派生对象公有接口的一部分
+私有继承和包含对象一样，继承实现，但不继承接口
+
+对于继承类，不能使用对象名来描述对象成员了，而是在成员初始化列表中使用类名来标识构造函数
+Student(const char* str, const double* pd, int n) : std::string(str), ArrayDb(pd, n)
+{}
+
+私有继承使用类名和作用域解析运算符调用基类方法
+使用强制类型转换，可以获得基类对象本身，由于Student类是从string类派生而来的，对Student使用强制类型转换，结果为继承而来的string对象
+const string& Student::Name() const
+{
+    return (const string&)*this;
+}
+
+对于基类友元函数，不能使用作用域解析运算符限定函数名，因为友元不属于类
+可以通过强制类型转换来调用函数
+cout << (const string&)stu;
+stu不会自动转换为string引用，在私有继承中，不能将指向派生类的引用或指针赋给基类引用或指针，除非使用强制类型转换
+即使上例使用的是公有继承，也必须使用强制类型转换，否则将调用派生类的友元函数，导致递归调用
+另一个原因是，由于该类使用的是多重继承，如果两个基类都提供了<<的重载，编译器将无法确定应该转换成哪个基类
+
+包含可以提供多个基类的对象，而私有继承只能使用一个
+私有继承的一个特性是可以在派生类中使用基类的保护成员，而包含类不行
+另一个特性是派生类可以重新定义虚函数，包含类不行，然而，重新定义的虚函数将只能在类中使用，同样被认为是从基类私有继承而来的
+
+公有继承允许隐式向上转换，保护继承只能在派生链中隐式向上转换，私有继承只能在继承的派生类中隐式向上转换
+
+using声明让派生类可以使用特定的基类成员，即使采用的是私有继承
+class Student : private std::string, private std:: valarray<double>
+{
+public:
+    using std::valarray<double>::min;
+    using std::valarray<double>::max;
+};
+这样使得min和max就像是Student的公有方法一样
+
+using声明只使用成员名，没有圆括号、函数特征标和返回类型，例如operator[]()方法声明如下
+using std::valarray<double>::operator[];
+这会使得对应方法的所有重载都可用，然后便可以删除Student::operator[]()的原型和定义
+using声明只用于继承，不适用于包含类
+
+多重继承
+Singer和Waiter都继承了一个Worker组件，SingingWaiter将包含两个Worker组件，如果此时将派生类对象的地址赋给基类指针，将出现二义性
+SingingWaiter ed;
+Worker* pw = &ed;		//哪个Worker组件？
+可以使用强制类型转换来指定对象
+Worker* pw1 =(Waiter*)&ed;
+Worker* pw2 =(Singer*)&ed;
+然而真正的问题是，为什么需要两个Worker组件？
+
+虚基类
+通过在类声明中使用关键字virtual，使多个类派生出的对象只继承一个基类对象
+class Singer : virtual public Worker{...};
+class Waiter : virtual public Worker{...};
+class SingingWaiter : public Singer, public Waiter{...};
+现在，SingingWaiter对象只包含一个Worker组件
+virtual有点像关键字重载
+
+C++不将虚基类行为作为标准，因为有时候可能确实需要基类的多个拷贝，此外，这样做还有其他的缺点
+
+对于常规的公有继承，派生类的构造函数需要在成员初始化列表中调用基类的构造函数，派生类的派生类可以将信息通过派生类传递给基类
+然而，这种类之间的信息自动传递对虚基类不起作用，因为这样将存在多条不同的路径将参数传递给基类组件
+//wk无法传递给Worker对象
+SingingWaiter(const Worker& wk, int p = 0, int v = Singer::other) : Waiter(wk, p), Singer(wk, v){}
+为避免这种冲突，当基类是虚的时，禁止信息通过中间类自动传递给基类，即上述代码将初始化panache和voice，但wk不会被传递给子对象
+
+然而，编译器必须在构造派生对象之前构造基类对象，因此上述情况编译器将调用Worker的默认构造函数
+如果不希望调用默认构造函数来构造虚基类对象，则需要显式调用基类构造函数
+SingingWaiter(const Worker& wk, int p = 0, int v = Singer::other)
+    : Worker(wk), Waiter(wk, p), Singer(wk, v){}
+上述代码显式调用构造函数Worker(const Worker&)，对于虚基类，必须这样做，但对于非虚基类，则是非法的
+
+可以使用作用域解析运算符来明确调用哪个方法，但最好是在SingingWaiter中重新定义Show()
+
+当类通过多条虚途径和非虚途径继承某个基类时，该类将包含一个表示所有虚路径的基类子对象和分别表示各条非虚路径的多个基类子对象
+
+如果类从不同的类继承了同名的数据成员，则在使用该成员名时，如果没有用类名进行限定，会导致二义性，但如果使用的是虚基类，则不一定
+在这种情况下，如果某个名称优先于其他所有名称，则不使用限定符也不会导致二义性
+
+派生类中的名称优先于直接或间接祖先类中的相同名称
+虚二义性规则与访问规则无关，即使E::omg()是私有的，不能在F类中直接访问，但使用omg()仍导致二义性
+参考书567页
+
+类模板
+template<typename Type>
+class Stack{
+    ...
+};
+
+每个函数头都应以相同的模板声明开头
+template<typename Type>
+函数定义时的类限定符Stack::应改为Stack<Type>::
+template<typename Type>
+bool Stack<Type>::push(const Type& item){...}
+如果在类声明中定义方法，可以省略模板声明和类限定符
+
+类模板和成员函数模板不是类和成员函数，而是C++编译器指令，说明如何生成类和成员函数定义
+不能将模板成员函数放在实现文件中，它们不能单独编译
+
+声明模板类对象
+Stack<int> stack_int;
+这将创建一个Stack<int>对象
+
+泛型标识符Type称为类型参数，它们类似于变量，但赋给它们的不能是数字，而只能是类型，即stack_int声明中Type的值是int
+
+类模板的实例化必须显式提供所需的类型，这和函数模板不同，因为编译器可以通过函数的参数类型来确定要生成哪种函数
+
+在类模板中，Stack是Stack<Type>的缩写，但只能在类中使用，在类的外面使用时，如使用作用域解析运算符，必须使用完整的Stack<Type>
+
+模板参数
+除Type外，还可以提供其他的非类型模板参数，如array类
+std::array<int, 5> apples();
+
+template<typename T, int n>
+class ArrayTP{
+private:
+    T arr[n];
+};
+
+非类型参数称为表达式参数，表达式参数可以是整型、枚举、引用或指针，不能是浮点型，但可以是浮点型指针
+模板代码不能修改参数的值，也不能使用参数的地址，实例化模板时，表达式参数必须是常量表达式
+
+相比构造函数的方法，通过表达式参数改变数组大小的方法有一个优点，即使用的是为自动变量维护的栈内存而非堆内存，执行速度更快，但缺点是每种数组大小都将生成一个实例
+Stack<int> eggs(5);
+Stack<int, 5> eggs;
+构造函数的方法更通用，这样可以允许将一种尺寸的数组赋给另一种尺寸的数组，也可以创建数组大小可变的类
+
+模板类可作基类，也可作组件类，还可以用作其他模板的类型参数
+template<typename T>
+class Array{...};
+
+template<typename Type>
+class GrowArray : public Array<Type>
+{...};
+
+template<typename Tp>
+class Stack{
+    Array<Tp> arr;
+};
+
+Array<Stack<int>> arr_stack_int;
+
+递归使用模板
+ArrayTP<ArrayTP<int, 5>, 10> twodee;
+
+多个类型参数
+template<typename T1, typename T2>
+class Pair{
+private:
+    T1 a;
+    T2 b;
+};
+
+Pair<string, int> ratings[4];
+
+默认类型参数
+template<typename T1, typename T2 = int>
+class Topo{...}
+只能为类模板类型参数提供默认值，不能为函数模板类型参数提供默认值，但可以为非类型参数提供默认值
+
+只有当模板类需要对象时，才生成类的隐式实例化
+ArrayTP<int, 100> stuff;	//隐式实例化
+ArrayTP<double, 30> *pd;	//不需要对象，不实例化
+pt = new ArrayTP<double, 30>;	//实例化
+
+显式实例化
+template class ArrayTP<string, 100>;
+这将是一个类声明，且该声明必须位于模板定义所在的名称空间中
+
+显式具体化
+特定类型的定义，使其行为与模板不同，参考函数模板
+template<typename T>
+class SortedArray{...};
+这个排序类对数字有用，但不太适合字符串数组
+template<>class SortedArray<const char*>{...}
+
+部分具体化
+template<typename T1, typename T2> class Pair{...};
+template<typename T1> class Pari<T1, int>{...};
+template后的<>声明的是未被具体化的类型参数，如果指定所有的类型，<>将为空，于是将成为显式具体化
+
+如果有多个模板可选择，将使用具体化程度最高的模板
+
+可以为指针提供特殊版本，这也被认为是一个具体化
+template<typename T>
+class Feed{...};
+template<typename T*>
+class Feed{...};
+
+Feed<char> fd1;	//通用版本
+Feed<char*> fd2;	//指针具体化版本
+
+可以通过部分具体化设置各种限制
+template<typename T1, typename T2, typename T3> class Trio{...};
+template<typename T1, typename T2> class Trio<T1, T2, T2>{...};	//T3是T2
+template<typename T1> class Trio<T1, T1*, T1*>{...};	//T2和T3是T1*
+
+FIND
+584
+
+如果在模板类外定义模板成员函数，要使用嵌套的模板
+template<typename T>
+    template<typename V>
+void beta<T>::hold(V v = 0)
+{...}
+不能写成
+template<typename T, typename V>
+
+模板用作参数
+template<template<typename T>class Thing>
+class Crab{};
+假如有以下声明
+Crab<King> legs;
+那么King必须是一个模板类
+template<typename T>
+class King{};
+
+模板类的非模板友元
+template<typename T>
+class HasFriend{
+public:
+    friend void counts();
+    friend void report(HasFriend<T> &);
+};
+counts()将成为该模板类所有实例化的友元
+report(HasFriend<int> &)将成为HasFriend<int>类的友元
+report(HasFriend<double> &)是report(HasFriend<int> &)的一个重载版本，它将成为HasFriend<double>类的友元
+
+如果模板类里有静态成员，这个类的每一个具体实现都将有自己的静态成员
+
+模板类的约束模板友元函数
+在类定义的前面声明每个模板函数
+template<typename T>
+void counts();
+template<typename T>
+void report(T&);
+然后在类中再次将模板函数声明为友元
+template<typename TT>
+class HasFriend{
+    friend void counts<TT>();
+    friend void report<>(HasFriend<TT> &);
+};
+对于report，由于可以从函数参数推断出模板类型参数，<>可以为空，也可以使用完整的声明
+friend void report<HasFriend<TT>>(HasFriend<TT> &);
+
+模板类的非约束模板友元函数
+在类中声明友元函数模板，可以创建非约束友元函数，即每个函数具体化都是每个类具体化的友元
+对非约束友元，友元模板类型参数与模板类类型参数不同
+template<typename T>
+class ManyFriend{
+    template<typename C, typename D>
+    friend void show2(C&, D&);
+};
+
+模板别名
+使用typedef为模板具体化指定别名
+typedef std::array<double, 12> arrd;
+arrd gallons;
+可以使用模板提供一系列的别名
+template<typename T>
+using arrtype = std::array<T, 12>;
+这将arrtype定义为一个模板别名，可以用它来指定类型
+arrtype<double> gallons;
+即arrtype<T>表示类型std::array<T, 12>
+
+可以将using = 用于非模板，这时这种语法与常规typedef等价
+typedef const char * pc1;
+using pc2 = const char*;
+typedef const int *(*pa1)[10];
+using pa2 = const int *(*)[10];
+
+友元类
+在类中添加声明
+friend class Remote;
+这将使Remote成为友元类，Remote类的所有方法将可以访问原始类的私有成员和保护成员
+友元声明可以位于公有、私有或保护部分，其位置没有影响
+
+前向声明
+如果仅希望将Remote类的部分成员函数作为友元，必须使用作用域解析运算符
+class Tv{
+    friend void Remote::set_chan(Tv& t, int c);
+};
+然而，编译器必须知道Remote的定义，从而知道Remote是一个类，set_chan()是一个类方法，这要求Remote类的定义应位于Tv类定义的前面
+但set_chan()接受一个Tv对象的引用作为参数，这意味着Tv定义应该位于Remote定义之前
+前向声明将避开这种循环依赖，需要在Remote定义前插入下面的语句
+class Tv;	//前向声明
+
+总的排列次序如下
+class Tv;
+class Remote{...};
+class Tv{...};
+
+不能使用class Remote的前向声明，因为编译器在看到Remote的一个方法被声明为Tv类的友元之前，应先看到Remote类的声明和set_chan()方法的声明
+
+对于Remote类中的内联代码，如果将调用Tv类的方法，编译器还要求先看到Tv类的声明，因此，解决方法是使Remote声明中只包含方法声明，将方法的实际定义放在Tv类之后
+
+内联函数是内部链接的
+嵌套类不创建类成员，只定义类型
+类的默认访问权限是private
+嵌套类的可见性由其位置决定，可见嵌套类的访问控制规则与正常的类一样
+
+模板的嵌套类
+由类型参数T定义的两个Node类是在两个独立的Queue类中定义的
+Queue<double>::Node
+Queue<char>::Node
+
+abort()的原型在cstdlib中，其向标准错误流cerr发送错误消息，然后终止程序
+exit()刷新文件缓冲区，但不显示消息
+
+调用abort()将直接终止程序，而不是先返回到main()
+
+throw语句实际上是跳转，throw关键字表示引发异常，紧随其后的值指出异常的特征
+catch关键字表示捕获异常
+异常处理程序以catch开头，随后是位于括号中的类型声明，指出要响应的异常类型，随后是代码块
+catch和异常类型用作标签
+try块标识特定异常可能被激活的代码块，后面跟一个或多个catch块
+
+throw语句终止函数的执行，然后沿着函数调用序列后退，直到找到包含try块的函数
+
+如果函数引发异常，但没有try块或没有匹配的处理程序，默认情况下，函数将调用abort()
+
+异常规范
+关键字noexcept指出函数不会引发异常
+double marm() noexcept;	//marm()不会引发异常
+noexcept()运算符判断操作数是否会引发异常
+
+函数由于异常而终止时，程序将释放栈中的内存，但会一直释放栈，直到找到一个位于try块中的返回地址，控制权将转到块尾的异常处理程序，而不是函数调用后的第一条语句，这个过程称为栈解退
+
+栈解退释放try块和throw之间整个函数调用序列中放在栈中的对象
+
+引发异常时编译器总是创建一个临时拷贝，即使异常规范和catch块中指定的是引用
+由于catch块中指定的是引用，其可以捕捉派生类对象，因此catch块的排列顺序应该与派生顺序相反
+
+使用...表示异常类型，将捕获任何异常
+catch(...){
+//statements
+}
+可以将上面的块放在所有catch块的后面，类似switch语句中的default
+
+可以创建捕获对象而不是对象的引用的处理程序，这样将捕获派生类对象的基类部分，调用虚方法时将调用基类方法而非派生类中重写的方法
+
+exception类在exception头文件中，有一个what()虚方法，该方法返回一个字符串
+
+头文件stdexcept中定义了logic_error类和runtime_error类，它们都是从exception公有派生而来的
+它们的构造函数接受一个string对象作为参数
+
+对于使用new导致的内存分配问题，new将引发bad_alloc异常，该异常类在头文件new中，同样从exception类公有派生而来
+使用std::nothrow可以让new在失败时返回空指针
+int * pi = new(std::nothrow) int;
+
+未捕获异常
+程序将首先调用terminate()，terminate()将调用abort()
+可以自行指定terminate()应调用的函数而不是abort()，这需要使用set_terminate()
+这两个函数都是在exception头文件中声明的
+
+运行阶段类型识别
+dynamic_cast运算符使用一个指向基类的指针来生成一个指向派生类的指针，如果做不到的话将返回空指针
+typeid运算符返回一个指出对象的类型的值
+type_info类存储了有关特定类型的信息
+只能将RTTI用于包含虚函数的类层次结构，因为只有这种情况下才应该将派生对象地址赋给基类指针
+
+Superb* pm = dynamic_cast<Superb*>(pg);
+如果pg的类型可以被安全地转换为Superb*，运算符将返回对象地址，否则将返回空指针
+
+基类指针可以调用派生类重写的虚方法，然而，不能调用派生类中独有的方法，此时可以将基类指针转换为派生类指针
+if(ps = dynamic_cast<Superb*>(pg))
+    ps->Say();
+
+可以将dynamic_cast用于引用，但没有与空指针对应的"空引用"值，因此无法使用特殊的引用值来指示转换失败
+对于引用，当请求失败时，dynamic_cast将引发bad_cast的异常，该异常在typeinfo头文件中定义，派生自exception类
+try{
+    Supreb& rs = dynamic_cast<Superb&>(rg);
+}catch(bad_cast&){...};
+
+typeid运算符使得能够确定两个对象是否为同种类型，它和sizeof有点相像，可以接受两种参数，类名，以及对象或结果为对象的表达式
+typeid运算符返回一个对type_info对象的引用，type_info类重载了==和!=运算符，可以用于比较类型
+如果pg指向一个Magnificent对象
+typeid(Magnificent) == typeid(*pg)
+上式将为true，否则为false
+
+如果参与比较的pg是空指针，将引发bad_typeid异常，该异常在typeinfo头文件声明
+
+type_info类包含一个name()成员，该函数返回一个字符串，通常但并非一定是类的名称
+
+类型转换运算符
+dynamic_cast
+const_cast
+static_cast
+reinterpret_cast
+
+dynamic_cast用于向上转换，即将派生类指针转换为基类指针
+如果基类指针指向派生类对象，则也可以进行向下转换，将指向派生类对象的基类指针转换为派生类指针
+向上转换不进行安全检查，向下转换将进行安全检查
+
+const_cast用于将const值或volatile值转换为非const值或非volatile值，不允许修改类型的其他方面
+const_cast并不代表一定成功，比如对const值的const指针而言，尽管取消了指针的const属性，仍然不能更改此const值
+
+static_cast用于允许隐式转换的一对类型之间的互相转换，假设Low是High的基类，则static_cast允许从Low转换为High，也允许从High转换为Low
+
+reinterpret_cast重解释一段内存，不允许删除const，不允许将指针转换为更小的整型或浮点型，不允许进行函数指针和数据指针之间的转换，但可以将指针转换为更大的整型
+对普通的强制类型转换，也与C语言不同，C++不允许将指针转换为小的整型
+
+string类的构造函数
+size_type在头文件string中定义
+string::npos是字符串的最大长度，通常为unsigned int的最大值，它是string类的静态成员
+npos比string字符最大的索引值大1，因此可以用它表示没有查找到字符或字符串
+
+getline()和cin.getline()有一个可选参数即输入边界，该边界会被丢弃
+cin.getline(info, 100, ':');	//一直读取直到:结束
+getline(stuff, ':');		//一直读取直到:结束
+对C字符串，getline()是istream类的方法，因此cin是调用对象
+而对string对象输入，getline是一个独立的函数，因此cin是函数的一个参数
+
+string的getline()读取字符，直到发生下列情况之一
+到达文件尾，此时输入流的eofbit被设置，方法fail()和eof()都将返回true
+遇到分界字符，默认为\n，此时会丢弃分界字符
+读取字符数达到最大值，该最大值为string::npos和可供分配的内存字节数二者中较小的一个，此时输入流的failbit被设置，即方法fail()将返回true
+
+将:指定为分界字符后，换行符将被视为常规字符
+
+string版本的operator>>()函数不断读取字符，直到遇到空白字符而不是分界字符停止，且>>运算符不丢弃空白字符，而是留在输入队列中
+
+string类的length()成员和size()成员都返回字符串的字符数，length()来自较早版本的string类，size()则是为了STL而添加的
+
+find()方法有4个版本
+size_type find(const string& str, size_type pos = 0)const	//从pos位置开始，查找子字符串str，如果找到，返回该子字符串首次出现时首字符的索引，否则返回string::npos
+size_type find(const char* s, size_type pos = 0)const	//从pos位置开始，查找子字符串s，如果找到，返回该子字符串首次出现时首字符的索引，否则返回string::npos
+size_type find(const char* s, size_type pos = 0, size_type n)	//从pos位置开始，查找s的前n个字符组成的子字符串，如果找到，返回该子字符串首次出现时首字符的索引，否则返回string::npos
+size_type findchar ch, size_type pos = 0)const		//从pos位置开始，查找ch，如果找到，返回该字符首次出现的位置，否则返回string::npos
+
+rfind()方法查找子字符串或字符最后一次出现的位置
+find_first_of()方法查找参数中任何一个字符首次出现的位置
+find_last_of()方法查找参数中任何一个字符最后一次出现的位置
+find_first_not_of()方法在字符串中查找第一个不包含在参数中的字符的位置
+
+c_str()方法返回一个内容相同的C字符串
+
+string库实际上基于一个模板类
+template<class charT, class traits = char _traits<charT>, class Allocator = allocator<charT>>
+basic_string{...};
+basic_string类有4个具体化，每个具体化都有一个typedef名称
+typedef basic_string<char> string;
+typedef basic_string<wchar_t> wstring;
+typedef basic_string<char16_t> u16string;
+typedef basic_string<char32_t> u32string;
+后两个是C++11新增的
+traits类描述关于选定字符的特定情况，如如何对值进行比较
+Allocator是一个管理内存分配的类
+
+智能指针
+auto_ptr已经被删除
+unique_ptr
+shared_ptr
+weak_ptr
+智能指针在头文件memory中
+template<class X>
+class auto_ptr{
+public:
+    explicit auto_ptr(X* p = 0) throw();
+}
+throw()意味着该构造函数不会引发异常，与auto_ptr一样，throw()也已被删除
+
+auto_ptr<double> pd(new double);
+auto_ptr<string> ps(new string);
+另外两个智能指针使用同样的语法
+unique_ptr<double> pdu(new double);
+shared_ptr<string> pdu(new string);
+
+使用auto_ptr，如果让两个智能指针指向同一个对象，则析构函数会被调用两次，要避免这个问题，有以下方法
+定义赋值运算符，使智能指针的赋值执行深复制，这样两个指针将指向不同的对象
+建立所有权概念，对特定对象，只有一个智能指针可以拥有它，赋值操作将转让所有权，auto_ptr和unique_ptr这么做，后者的策略更复杂一些
+跟踪引用特定对象的智能指针数，这称为引用计数，shared_ptr执行这种策略
+
+unique_ptr<string> p3(new string("auto"));
+unique_ptr<string> p4;
+p4 = p3;	//编译错误
+
+允许将一个unique_ptr临时右值赋给另一个unique_ptr，如果源unique_ptr将存在一段时间，那么编译器禁止这样做
+unique_ptr<string> demo(const char*){
+    unique_ptr<string> temp(new string(s));
+    return temp;
+}
+unique_ptr<string> ps;
+ps = demo("auto");
+ps接管了string对象，demo返回的临时unique_ptr将很快被销毁
+
+std::move()可以将一个unique_ptr赋给另一个
+unique_ptr如何区分安全和不安全的用法呢，它使用了移动构造函数和右值引用
+
+auto_ptr只使用new和delete，而unique_ptr支持new[]和delete[]
+使用new时，可以使用auto_ptr，unique_ptr和shared_ptr
+使用new[]时，可以使用unique_ptr
+不使用new时，不能使用auto_ptr和shared_ptr
+不使用new和new[]时，不能使用unique_ptr
+
+STL容器包含指针时，往往应选择shared_ptr，因为很多STL算法支持复制和赋值操作，当不需要进行这些操作时，可以选择unique_ptr
+
+当unique_ptr为右值时，可以将其赋给shared_ptr，shared_ptr包含一个显式构造函数，可将右值unique_ptr转换为shared_ptr，然后接管对象
+
+STL
+每个STL容器模板都接受一个可选的模板参数，该参数指定使用哪个分配器对象来管理内存
+
+通用方法
+size()	返回容器中元素数目
+swap()	交换两个容器的内容
+begin()	返回第一个元素的迭代器
+end()	返回超过容器尾的迭代器
+
+部分STL容器的方法
+push_back()将元素添加到末尾，这样做时无需考虑内存管理
+erase()接受两个迭代器参数，删除给定区间的元素，第一个迭代器指向删除的第一个元素，第二个迭代器指向删除的最后一个元素的后一个位置
+insert()接受三个迭代器参数，第一个参数指定了插入位置，第二个和第三个参数定义了被插入区间，通常是另一个容器对象的一部分
+
+STL函数
+for_each()接受三个参数，前两个是区间迭代器，最后一个是函数指针，确切地说是函数对象，该函数不能修改容器元素的值，对区间内的每个元素执行这个函数
+random_shuffle()接受两个迭代器参数，指定区间，随机排列该区间中的元素
+与可用于任何容器类的for_each()不同，random_shuffle()要求容器类可以随机访问
+sort()也要求容器类支持随机访问，其接受两个定义区间的迭代器参数，并使用为容器元素类型定义的<运算符排序，如果容器元素是用户定义的对象，则需要该类提供成员或非成员函数operator<()
+sort()的另一个版本接受第三个参数，第三个参数指向函数对象，而不是用于比较的operator<()，函数对象返回bool值，false表示两个参数的顺序不正确
+对该函数对象还有一个要求，如果两个参数相同，该函数对象应该返回false
+
+为区分++运算符重载的前缀和后缀版本，前缀版本没有参数，后缀版本有一个int参数
+
+迭代器的五种类型
+输入迭代器用于读取容器中的信息，但不会修改元素值，输入迭代器是单向的，可以递增，但不能倒退
+不能够保证输入迭代器每次遍历容器时的顺序相同，输入迭代器被递增后也不保证先前的值仍可以被解引用
+
+输出迭代器用于将信息写入容器，但解引用不能读取容器的值，输出迭代器也是单通行、只能递增的，同样不保证遍历的顺序
+
+正向迭代器总是按相同的顺序遍历一系列值，且保证递增后仍可以对前面的迭代器值解引用，且可以得到相同的值，前提是保存了该迭代器
+正向迭代器可以设计为允许读写，也可以设计为只读
+
+双向迭代器具有正向迭代器的所有特性，此外支持递减运算符
+
+随机访问迭代器增加了随机访问的操作即加减运算符和加减赋值运算符，此外还有用于对元素进行排序的关系运算符
+
+概念表示一系列的要求，例如正向迭代器概念
+概念有类似继承的关系，但显然不能将C++继承用于迭代器，因为正向迭代器可以是一个类，而双向迭代器可以是一个常规指针，C++将这种概念上的继承称为改进，概念的具体实现称为模型
+
+copy()可以将数据从一个容器复制到另一个容器中，该算法以迭代器方式实现
+copy()的前两个迭代器参数表示要复制的范围，最好是输入迭代器，第三个参数表示要将第一个元素复制到什么位置，最好是输出迭代器
+
+ostream_iterator模板是一个输出迭代器模型，也是一个适配器，可以将其他接口转换为STL接口，其位于头文件iterator中
+ostream_iterator<int, char> out_iter(cout, " ");
+第一个模板参数是被发送给输出流的数据类型，第二个模板参数是输出流使用的字符类型
+构造函数的第一个参数是要使用的输出流，第二个字符串参数是发送给输出流的每个数据项后显示的分隔符
+*out_iter++ = 15;
+这将把15和空格组成的字符串发送到cout管理的输出流
+copy(dice.begin(), dice.end(), out_iter);
+这将把dice容器的内容复制到输出流中，即显示容器的内容
+
+istream_iterator是一个输入迭代器模型，与ostream_iterator相似，但省略构造函数参数表示输入失败，将持续读取输入流直到文件结尾、类型不匹配或其他输入故障为止
+
+reverse_iterator
+对reverse_iterator执行递增操作将导致它被递减
+rbegin()和end()返回相同的值，但类型不同，前者为reverse_iterator，后者为iterator
+同样，rend()和begin()返回相同的值，类型不同
+使用反向迭代器，C++会自动进行先递减，再解引用，如rp指向位置6，*rp将是位置5的值
+
+copy()不能自动根据发送值调整目标容器的长度，插入迭代器通过将复制转换为插入解决了这些问题
+back_insert_iterator将元素插入到容器尾部，但只能用于允许在尾部快速插入的容器
+front_insert_iterator将元素插入到容器前端，但只能用于允许在起始位置做固定时间插入的容器
+insert_iterator将元素插入到insert_iterator构造函数的参数指定的位置前面
+三个插入迭代器将容器类型作为模板参数，将实际容器作为构造函数参数
+back_insert_iterator<vector<int>> back_iter(dice);
+
+容器
+存储在容器中的元素类型必须是可复制构造的和可赋值的，包括基本类型和没有将复制构造函数和赋值运算符声明为私有的或保护的类，C++11改进了这些概念，添加了可复制插入和可移动插入
+时间复杂度从快到慢为编译时间，固定时间，线性时间
+
+序列
+序列要求迭代器至少是正向迭代器，虽然array不满足序列的所有要求，但也属于序列容器
+序列要求元素按严格的线性顺序排列，即分支结构不是序列
+
+序列的表达式
+a.front()返回*a.begin()，值为引用
+a.back()返回*--a.end()，值为引用
+a[n]和a.at(n)都返回一个指向容器中第n个元素的引用，但at将执行边界检查
+
+deque支持随机访问
+
+可反转容器
+可反转容器增加了rbegin()和rend()
+
+list双向链表
+list需要双向迭代器，也是可反转容器，但不支持随机访问和数组表示法，且从容器中插入或删除元素后，迭代器指向的元素不变
+list的void merge(list<T, Alloc>& x)方法将链表x与调用链表合并，两个链表必须已经排好序，合并后x为空
+void sort()方法使用<运算符对链表排序，复杂度为NlogN
+void remove(const T& val)从链表中删除val的所有实例
+void splice(iterator pos, list<T, Alloc>x)将链表x插入到pos前面，x将为空
+void unique()合并链表中连续的相同元素
+insert()将副本插入，splice()将原始区间移到目标位置，splice()执行后，迭代器仍有效
+
+forward_list单链表，只需要正向迭代器
+
+queue模板类是一个适配器类，不允许随机访问，不允许遍历队列，查询操作为front()和back()，弹出操作为pop()
+
+priority_queue优先队列
+priority_queue模板类是一个适配器类，它支持的操作与queue相同，但默认的底层类是vector，最大的元素被移到队首，可以修改比较大小的方式，方法是提供一个可选的构造函数参数
+priority_queue<int> pq(greater<int>);
+greater<>()是一个函数对象
+
+stack是一个适配器类，底层类默认是vector，不允许随机访问，不允许遍历栈，查询操作为top()
+
+array不是STL容器，因为其长度固定，但很多STL算法可用于array
+
+关联容器
+X::value_type
+X::key_type
+关联容器允许插入元素，但不能指定元素的插入位置，其通常用树实现
+4种关联容器，set，multiset，map，multimap，前两种在头文件set中定义，后两种在头文件map中定义
+
+set值的类型与键相同，且键唯一
+multiset可以有多个值的键相同
+map值的类型和键不同，键唯一
+multimap可以有多个值的键相同
+
+set可反转，可排序
+set<string> A;
+set<string, less<string>> A;
+可选的less<>指示用来对键排序的比较函数或对象
+可以用数组初始化set，方法是在构造函数中传入迭代器区间
+
+set_union()接受5个迭代器参数，最后一个迭代器是输出迭代器，指出将结果集合复制到何处
+set_intersection()和set_difference()分别查找交集和差集，接口与set_union()相同
+lower_bound()方法和upper_bound()方法将键作为参数并返回一个迭代器，前者返回的迭代器指向第一个不小于键参数的成员，后者返回的迭代器指向集合中第一个大于键参数的成员
+
+multimap可反转，可排序
+pair<class T, class U>将键值组合在一起，可以使用first和second数据成员来访问其两个部分
+count()方法接受键作为参数，返回该键的元素数目
+lower_bound()和upper_bound()将键作为参数，与处理set相同
+equal_range()方法将键作为参数，返回两个迭代器，表示该区间与键匹配，这两个迭代器被封装在一个pair对象中
+
+无序关联容器
+unordered_set，unordered_multiset，unordered_map，unordered_multimap
+无序关联容器是基于哈希表的
+
+生成器是不用参数就可以调用的函数符
+返回bool值的一元函数是谓词
+返回bool值的二元函数是二元谓词
+提供给for_each()的函数符应该是一元函数，因为其每次用于一个容器元素
+
+扩展函数参数的方法
+如果一个函数只接受一元函数作为参数，但有时想要传入2个参数，可以将其中一个参数设计为类成员
+如果已经存在可用的二元函数，也可以在类中创建一元函数，让这个一元谓词调用二元函数
+
+函数适配器
+参考书711页、822页
+
+initializer_list
+位于头文件initializer_list中
+如果类有接受initializer_list作为参数的构造函数，则使用{}初始化将调用的是参数为initializer_list的构造函数
+std::vector<int> vi{10};
+std::vector<int> vi(10);
+std::vector<int> vi({10});	//调用这个
+
+initializer_list模板类包含了方法begin()和end()，除构造函数外，还可以将initializer_list作为常规函数的参数
+
+列表初始化
+int* ar = new int[4] {2, 3, 3, 3};
+缩窄
+禁止将数值赋给无法存储它的数值变量，如果数值在较窄类型的取值范围内，则也可以
+
+使用auto必须进行显式初始化
+
+decltype将变量的类型声明为表达式指定的类型
+double x;
+int n;
+decltype(x*n) q;	//让q的类型与x*n相同，即double
+
+这在定义模板时有用，因为只有模板被实例化时才能确定类型
+template<typename T, typename U>
+void ef(T t, U u){
+    decltype(T*U) tu;
+}
+tu将为表达式T*U的类型
+
+decltype指定的类型可以为引用和const
+为确定类型，编译器必须遍历一个核对表，简化如下
+decltype(expression) var;
+如果expression是一个不被括号括起的标识符，则var的类型与该标识符的类型相同，包括const等限定符
+如果expression是一个函数调用，则var的类型与函数的返回类型相同，但并不会实际调用函数
+如果expression是一个用括号括起的左值，则var为指向其类型的引用
+如果前面的条件都不满足，则var的类型与expression的类型相同
+
+后置返回类型
+在函数名和参数列表的后面指定返回类型，auto为占位符
+auto f(double, int) -> double;
+主要用于模板函数的返回值
+template<typename T, typename U>
+auto eff(T t, U u) -> decltype(t*u);
+这里解决的问题是，在编译器遇到eff的参数列表前，t和u还不在作用域内
+
+using = 模板别名
+与typedef不同的时，using = 可用于模板部分具体化
+
+nullptr == 0将返回true，但nullptr是指针类型，不能转换为整型类型
+
+异常规范
+唯一保留的异常规范noexcept指出函数不会引发异常
+void f(short) noexcept;
+但已经被废除的写法依然可行
+void f(short) throw();
+
+作用域内枚举
+使用class或struct定义
+enum class new1{never, haha};
+enum struct new2{never, bie};
+
+类内成员初始化
+如果构造函数在成员初始化列表中提供了相应的值，类内成员初始化将被覆盖
+
+新的STL迭代器
+cbegin()和cend()返回const迭代器，crbegin()和crend()是rbegin()和rend()的const版本
+
+右值引用
+右值引用可以关联到右值，即出现在赋值表达式右边，但不能取地址的值，包括除C字符串外的字面常量、x+y等表达式以及返回值的函数
+将右值关联到右值引用会导致该右值被存储，且可以根据右值引用获得其地址
+
+移动语义
+在将所有权转移的过程中，移动构造函数和移动赋值运算符可能修改其实参，因此右值引用参数不应是const
+
+强制移动
+static_cast<>可以将对象的类型强制转换成右值引用
+头文件utility中声明的函数std::move()也可以
+
+如果提供了析构函数、复制构造函数或复制赋值运算符，则不会自动生成移动构造函数和移动赋值运算符，如果提供了移动构造函数或移动赋值运算符，则不会自动生成复制构造函数和复制构造运算符
+
+默认方法
+如果提供了移动构造函数，又确实需要默认的复制构造函数，可以用default显式声明
+class A{
+public:
+    A(A&&);
+    A() = default;
+    A(const A&) = default;
+    A& operator=(const A&) = default;
+};
+
+禁用方法
+要禁止复制对象，可以使用delete禁用复制构造函数和复制赋值运算符
+class A{
+public:
+    A() = default;
+    A(const A&) = delete;
+    A& operator=(const A&) = delete;
+    A(A&&) = default;
+    A& operator=(A&&) = default;
+};
+此时将禁止复制，但允许移动
+与default不同，delete可以用于任何方法
+
+禁用方法可以避免类型转换
+class A{
+public:
+    void redo(double);
+    void redo(int) = delete;
+};
+这样可以避免用int值调用时被转换成double值，并在遇到这种情况时生成编译错误
+
+委托构造函数
+委托构造函数使得可以在一个构造函数的定义中调用另一个构造函数，委托需要使用成员初始化列表
+class Notes{
+    int k;
+    double x;
+    std::string st;
+public:
+    Notes();
+    Notes(int);
+    Notes(int, double);
+    Notes(int, double, std::string);
+};
+Notes::Notes(int kk, double xx, std::string stt) : k(kk), x(xx), st(stt){}
+Notes::Notes() : Notes(0, 0.01, "Oh"){}
+Notes::Notes(int kk) : Notes(kk, 0.01, "Ah"){}
+Notes::Notes(int kk, double xx) : Notes(kk, xx, "Uh"){}
+
+继承构造函数
+对名称空间
+namespace Box{
+    int fn(int){}
+    int fn(double){}
+}
+using Box::fn;
+这让fn的所有重载都可用
+这种方法可以让基类的所有非特殊成员函数对派生类可用
+C++11还可以将这种方法用于构造函数，这将让派生类继承基类除默认构造函数、复制构造函数、移动构造函数和与派生类构造函数特征标匹配的构造函数外的所有构造函数
+继承的基类构造函数只能初始化基类成员，如果要初始化派生类成员，可以在成员初始化列表中调用基类构造函数
+
+override
+重写的虚函数如果特征标不匹配，将隐藏而不是覆盖旧版本，可以使用override指出要覆盖一个虚函数
+class A{
+virtual void f(char ch)const{}
+};
+class B : public A{
+virtual void f(char* ch)const override{}
+}
+如果声明与基类方法不匹配，如上所示，编译器将视为错误
+
+final
+final可以禁止派生类覆盖特定的虚方法
+class A{
+virtual void f(char* ch)const final{}
+}
+这将禁止A的派生类重写函数f()
+
+override和final并非关键字，而是具有特殊含义的标识符
+
+Lambda函数
+lambda函数是一个匿名函数，对于接受函数指针或函数符的函数，可以使用lambda函数作为其参数
+lambda函数中，[]代替了函数名，且没有声明返回类型
+[&count](int x){count += (x%13 == 0);}
+如果lambda函数只有一条返回语句，则返回类型根据返回值推断得到，否则需要提供后置返回类型
+[](double x) -> double{int y = x; return x - y;}
+如果lambda函数没有返回语句，推断出的返回类型将为void
+
+尽管lambda是匿名函数，仍可以使用auto给lambda函数指定一个名称
+auto mod3 = [](int x){return x%3 == 0;}
+bool result = mod3(4);
+
+不同于常规函数，可以在函数内部定义有名称的lambda
+函数指针阻止了内联，因为编译器一般不会内联其地址被获取的函数，函数地址的概念意味着非内联函数，而函数符和lambda通常不会阻止内联
+
+lambda可以访问作用域内的任何动态变量，要捕获该变量，将其名称放入方括号内
+如果只指定了变量名，将按值访问变量，如果加上&，将按引用访问变量
+实际上，[&]可以按引用访问所有动态变量，而[=]可以按值访问所有动态变量，还可以混合使用
+[ted, &ed]
+[&, ted]	//按值访问ted，按引用访问其他所有动态变量
+[=, &ed]	//按引用访问ed，按值访问其他所有动态变量
+
+包装器wrapper，又叫适配器
+参考书822页
+
+可变参数模板
+元运算符...用于声明表示模板参数包的标识符
+template<typename... Args>
+void show_list(Args... args){}
+Args是一个模板参数包，args是一个函数参数包
+Args与任意数量的类型匹配，包括零
+
+show_list('S', 80, "sweet", 4.5);
+上面的函数调用将令Args包含与函数调用参数匹配的类型：char、int、const char*、double
+
+展开参数包
+将省略号...放在函数参数包名的右边可以展开参数包，然后可以递归处理
+递归处理的方式是，将模板头改为下面的形式，然后对第一个参数进行处理
+template<typename T, typename... Args>
+void show_list(T value, Args... args){
+    std::cout << value << ", ";
+    show_list(args...);
+}
+这样函数每次将从左到右处理参数包列表的一项
+可以定义一个只处理一项参数的模板，令其不进行递归调用和输出逗号
+
+可以指定展开模式，以便按引用或const传递参数包，这会对展开的每个参数这么做
+template<typename T, typename... Args>
+show_list(const Args&... args);
+
+并行编程
+关键字thread_local将变量声明为静态存储，其持续性与特定线程相关，即定义该变量的线程过期时，变量也将过期
+并行编程的库包含原子操作库和线程支持库，原子操作库提供了atomic头文件，线程支持库包含头文件thread、mutex、condition_variable和future
+
+random头文件支持多种随机数生成器和分布
+chrono头文件提供了处理时间间隔的途径
+tuple头文件支持模板tuple，tuple对象是广义的pair对象，存储多个不同类型的值
+regex头文件支持正则表达式库
+
+union成员可以有构造函数和析构函数，但不能有虚函数
+
+字面量运算符，可以定义二进制字面量，如10101010b
+
+宏assert在运行阶段对断言进行检查，如果为true，显示一条消息，否则调用abort()
+
+
+
+
+
+
+
+
+2022.1.26
+
+内联命名空间主要用来保持跨版本的 ABI 兼容性，其自动将内部的标识符放到外层作用域
+在命名空间的最后注释出命名空间的名字
+
+// 在 .cc 中使用别名缩短常用的命名空间
+namespace baz = ::foo::bar::baz;
