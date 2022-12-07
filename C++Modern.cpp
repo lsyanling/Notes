@@ -94,7 +94,7 @@ auto* j = new auto(5);
 // 如果使用auto时未使用引用和指针，则忽略cv限定符，否则推导cv限定符
 const int i = 5;
 auto j = i;		// auto是int
-auto* k = i;		// auto是const int，k是const int*
+auto* k = i;	// auto是const int，k是const int*
 auto& m = i;	// auto是const int，m是const int&
 
 // auto本身支持添加cv限定符
@@ -116,3 +116,12 @@ auto m = i;		// auto是int*
 
 int sum(int a1, int a2) {return a1+a2;}
 auto j = sum;	// auto是int(__cdecl*)(int, int)
+
+// 使用auto {}列表初始化时，列表中必须为单元素，auto类型被推导为单元素的类型
+auto x1{3};     // x1为int
+auto x2{4, 5};  // error
+
+// 使用auto = {}列表初始化时，列表中可以包含单个或者多个元素，
+// auto类型被推导为std::initializer_list<T>，元素的类型必须相同
+auto x3 = {1, 2, 3};     // x3为std::initializer_list<int>
+auto x4 = {1, 2.0};      // error
