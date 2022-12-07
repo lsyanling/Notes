@@ -1,0 +1,74 @@
+复合字面量在函数外部具有静态存储期，在块中具有自动存储期
+可以对复合字面量使用指定初始化器
+
+伸缩型数组成员，当数组作为结构最后一个成员时，方括号是空的
+声明一个这样类型的结构变量时，不能用该数组做任何事，因为没有为
+该数组预留空间
+该特性希望使用指向结构的指针和malloc()来使用结构
+struct flex
+{
+    int count;
+    double average;
+    double scores[];
+};
+struct flex * pf;
+pf = malloc(sizeof(struct flex) + 5 * sizeof(double));
+现在可以直接用指针pf访问数组成员
+pf -> scores[2] = 18.5;
+
+伸缩型数组成员结构不能进行赋值或拷贝操作
+struct flex * pf1, * pf2;
+*pf2 = *pf1
+这样做只能伸缩型拷贝数组成员以外的成员
+确实要进行拷贝，应使用memcpy()函数
+不要把这种结构作为参数传递给函数，原因同上
+不要将带伸缩型数组成员的结构作为数组成员或另一个结构的成员
+
+嵌套结构
+struct names
+{
+    char first[20];
+    char last[20];
+};
+struct person
+{
+    int id;
+    struct names name;
+}
+struct person ted = {8483, {"Ted", "Grass"}};
+通过 ted.name.first 访问ted
+
+匿名结构
+struct person
+{
+    int id
+    struct {char first[20]; char last[20];}
+};
+初始化 ted 的方式相同
+struct person ted = {8483, {"Ted", "Grass"}};
+但是可以把 first 看作是 person 的成员那样使用它
+ted.first
+
+使用结构数组的函数
+double sum(const struct funds money[], int n);
+
+enum spectrum {red, orange, yellow, green, blue, violet};
+enum spectrum color;
+第一个声明创建了spectrum作为标记名，允许把enum spetrum作为一个类型名使用
+第二个声明使color作为该类型的变量，花括号内的标识符枚举了spectrum变量可能有的值
+因此，color可能的值是red、orange、yellow等，这些符号常量称为枚举符
+color = blue;
+if(color == yellow)
+……;
+for(color = red; color <= violet; color++)
+……;
+spectrum的枚举范围为0~5
+C++不允许枚举变量使用递变运算符
+
+可以对枚举变量指定整数值
+enum spectrum {red = 10, orange = 20, yellow = 500};
+enum spectrum {red, orange = 20, yellow};
+则red的值是0，yellow的值是21
+
+特定作用域中结构标记、联合标记和枚举标记共享相同的名称空间，该名称空间与普通变量使用的名称空间不同
+但C++中标记名和变量名放在相同的名称空间

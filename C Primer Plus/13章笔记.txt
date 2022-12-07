@@ -1,0 +1,96 @@
+如果使用重定向把标准输出发送给文件，标准错误输出仍然会发送到屏幕上
+
+在其他的函数中调用exit()也能结束程序
+
+fopen()在stdio.h中，第一个参数是待打开文件的名称，确切地说是包含该文件名的字符串地址，第二个参数是一个字符串，指定待打开文件的模式
+程序成功打开文件后，fopen()返回文件指针
+
+文件指针是指向FILE的指针，FILE是定义在stdio.h的派生类型
+文件指针不指向实际的文件，指向一个包含文件信息的数据对象
+
+getc()和putc()需要知道使用哪一个文件，使用文件指针作为参数
+ch = getchar();
+ch = getc(fp);
+putc(ch, fpout)
+stdout是与标准输出关联的文件指针，定义在stdio.h中
+
+fclose(fp)函数关闭fp指定的文件，必要时刷新缓冲区
+关闭成功返回0，否则返回EOF
+fp必须是fopen()返回的文件指针，而非文件名
+
+stderr指向标准错误文件
+
+fprintf()和fscanf()的第一个参数是文件指针
+fgets()和fputs()的最后一个参数是文件指针
+
+fgets()读到第一个换行符时停止，在后面添加空字符
+
+fseek()的第一个参数是FILE指针，指向已打开的待查找的文件
+第二个参数是偏移量，表示从起始点要移动的距离，可以为正，负，零
+该参数必须是long型
+第三个参数是模式，确定起始点
+SEEK_SET, SEEK_CUR, SEEK_END
+正常时返回0，出现错误返回-1
+
+ftell()的参数为FILE指针，返回当前的位置，值为long型，定义在stdio.h中
+以二进制模式打开的文件，函数返回距文件开始处的字节数
+
+以二进制模式打开文件时，文件结尾符可能在Ctrl+Z的后面，也可能中间用空字符填充使文件大小为256的倍数
+程序将换行\r\n看作两个字符
+以文本模式打开时，C能识别Ctrl+Z作为文件结尾标记，且将\r\n看作\n
+
+对于文本模式，ftell()返回的值可以作为fseek()的第二个参数
+fseek(file, ftell-pos, SEEK_SET)
+对于MS-DOS，ftell()返回的值把\r\n当作一个字节计数
+
+fpos_t型（文件定位类型）不能是数组类型，可以实现为结构
+int fgetpos(FILE * restrict stream, fpos_t * restrict pos);
+调用该函数时，它把fpos_t类型的值放在pos指向的位置，该值描述了文件中的一个位置，成功返回0，失败返回非0
+int fsetpos(FILE *stream, const fpos_t *pos);
+调用该函数时，使用pos指向位置上的fpos_t类型值来设置文件指针指向该值指定的位置，成功返回0，失败返回非0
+fpos_t类型的值应通过之前调用fgetpos()获得
+
+rewind()的参数为FILE指针，让程序回到文件开始处
+
+int ungetc(int c, FILE *fp)
+ungetc()把c指定的字符放回输入流中，下次调用标准输入函数时将读取该字符
+ch = getchar();
+ungetc(ch, stdin);
+
+int fflush(FILE *fp)
+刷新输出缓冲区，如果fp是空指针，所有输出缓冲区都被刷新
+输入流中使用fflush()是未定义的
+
+int setvbuf(FILE * restrict fp, char * restrict buf, int mode, size_t size)
+setvbuf()创建一个供标准 I/O 函数替换使用的缓冲区
+在打开文件后且未对流进行其他操作前，调用该函数
+fp识别待处理的流，buf指向待使用的存储区，如果buf的值不是NULL
+必须创建一个缓冲区，如果是NULL，函数会为自己分配一个缓冲区
+size告诉setvbuf()数组的大小，mode的选择如下
+_IOFBF表示完全缓冲
+_IOLBF表示行缓冲
+_IONBF表示无缓冲
+操作成功返回0，否则返回非0
+
+fread()和fwrite()用于以二进制形式处理数据
+size_t fwirte(const void * restrict ptr, size_t size, size_t nmemb, FILE * restrict fp)
+ptr是待写入数据块的地址，size以字节为单位表示待写入数据块的大小，nmemb表示待写入数据块的数量，fp指定待写入的文件
+char buffer[256];
+fwrite(buffer, 256, 1, fp);
+将一块256字节的数据从buffer写入文件
+double earnings[10];
+fwrite(earnings, sizeof(double), 10, fp);
+将earnings数组中的数据写入文件，数据被分成10块，每块都是double的大小
+函数返回成功写入项的数量，如果出现错误，返回值会更小
+
+size_t fread(void * restrict ptr, size_t size, size_t,nmemb, FILE * restrict fp)
+ptr是待读取文件数据在内存中的地址，fp指定待读取文件，该函数用于读取被fwrite()写入文件的数据
+double earnings[10];
+fread(earnings, sizeof(double), 10, fp);
+将10个double大小的值拷贝进earnings数组中
+函数返回成功写入项的数量，如果出现错误，返回值会更小
+
+int feof(FILE *fp) 和 int ferror(FILE *fp)
+当上一次输入调用检测到文件结尾，feof()返回非0，否则返回0
+当读或写出现错误，ferror()返回非0，否则返回0
+用于区分EOF是来自文件结尾还是出现读写错误

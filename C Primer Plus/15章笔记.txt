@@ -1,0 +1,110 @@
+&	|	~	^
+按位与，按位或，按位取反，按位异或
+
+掩码
+flags &= MASK;
+将flags与MASK中为1相对的位保留，为0相对的位设为0
+理解为隐藏与MASK中0相对的位
+
+打开位
+flags |= MASK;
+将flags与MASK中为0相对的位保留，为1相对的位设为1
+理解为打开与MASK中1相对的位
+
+关闭位
+flags &= ~MASK;
+将flags与MASK中为0相对的位保留，为1相对的位设为0
+理解为关闭与MASK中1相对的位
+
+切换位
+flags ^= MASK;
+将flags与MASK中为0相对的位保留，为1相对的位切换
+如(00001111)^(10110110)
+结果为(10111001)
+flags中与MASK为1的位被切换
+
+检查位
+if((flags & MASK) == MASK)
+只比较flags与MASK中为1相对的位
+
+<<左移，>>右移
+对于无符号类型的值，用0填充空出的位置
+对于右移运算符，如果是有符号类型的值，其行为取决于实现
+移位运算符不改变运算对象
+(10001010)<<2
+结果为(00101000)
+
+移位赋值运算符
+<<=
+>>=
+
+number<<n
+number乘以2的n次幂
+number>>n
+如果number非负，用number除以2的n次幂
+
+位字段
+一个signed int或unsigned int或_Bool（bool）类型变量中的一组相邻的位
+位字段通过如下的结构声明建立
+struct{
+    unsigned int autfd : 1;
+    unsigned int bldfc : 1;
+    unsigned int undln : 1;
+    unsigned int itals :1;
+}prnt;
+prnt包含4个1位的字段，可以通过结构成员运算符单独给字段赋值
+prnt.itals = 0;
+prnt.undln = 1;
+由于每个字段恰好为1位，只能赋值为0或1
+变量prnt被储存在int大小的内存单元中
+
+可以创建多位的字段
+struct{
+    unsigned int code1 : 2;
+    unsigned int code2 : 2;
+    unsigned int code3 : 8;
+}prcode;
+prcode.code1 = 0;
+prcode.code2 = 3;
+prcode.code3 = 102;
+要确保所赋的值不超过字段可容纳范围
+
+如果声明的总位数超过了一个unsigned int类型的大小
+会用到下一个unsigned int类型的存储位置
+一个字段不允许跨越两个unsigned int之间的边界
+编译器会自动移动跨界的字段，保持unsigned int的边界对齐
+发生这种情况时，第1个unsigned int中会留下一个未命名的洞
+可以用未命名的字段宽度填充未命名的洞
+使用一个宽度为0的未命名字段会迫使下一个字段与下一个整数对齐
+struct{
+    unsigned int field1 : 1;
+    unsigned int           : 2;
+    unsigned int field2 : 1;
+    unsigned int           : 0;
+    unsigned int field3 : 1;
+}stuff;
+stuff.field1和stuff.field2之间有一个2位的空隙
+stuff.field3将储存在下一个unsigned int中
+
+字段储存在一个int中的顺序取决于机器，有时候是从左往右，有时候是从右往左
+
+C11的对齐特性
+_Alignof运算符给出一个类型的对齐要求
+size_t d_align = _Alignof(float)
+假设d_align的值是4，意思是float类型对象的对齐要求是4，4是储存该类型值相邻地址的字节数
+一般来说对齐值是2的非负整数次幂，较大的对齐值被称为stricter或stronger，较小的对齐值被称为weaker
+
+可以使用_Alignas说明符指定一个变量或类型的对齐值，该值不应该小于基本对齐值，例如不要请求float类型的对齐值是1或2，该说明符用作声明的一部分
+_Alignas(double) char c1;
+_Alignas(8) char c2;
+unsigned char _Alignas(long double) c_arr[sizeof(long double)];
+
+程序包含stdalign.h后，可以将alignas和alignof分别作为_Alignas和_Alignof的别名，与C++关键字匹配
+
+C11在stdlib.h库中有一个新的内存分配函数，用于对齐动态分配的内存
+void *aligned_alloc(size_t alignment, size_t size)
+第1个参数代表指定的对齐，第2个参数是所需的字节数，应为第1个参数的倍数
+同样使用free()释放之前分配的内存
+
+bitval * 2和bitval << 1都把bitval的值增加一倍，是等效的
+但mask += bitval和mask |= bitval只有在bitval和mask没有同时打开的位时效果才相同，如2 | 4为6，2 | 6也为6
