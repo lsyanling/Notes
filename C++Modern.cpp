@@ -182,3 +182,67 @@ auto t3 = &typeid(int); // t2是const std::type_info*
 
 
 // decltype
+
+// C++11
+// decltype可以获取表达式的类型
+int x1 = 0;
+double x2 = 1.0;
+decltype(x1) x3 = 1;    // x3是int
+decltype(x1 + x2) x4 = x1 + x2;     // x1 + x3是double
+
+// auto不能在非静态成员变量中使用，但decltype可以
+struct S1{
+    int x1;
+    double x2;
+    decltype(x1) x3;
+    decltype(x1 + x3) x4;
+};
+
+// 可以在函数形参列表和返回值中使用
+int x1 = 0;
+decltype(x1) sum(decltype(x1) a1, decltype(a1) a2) {return a1 + a2;}
+auto x2 = sum(5, 10);
+
+// C++11
+// 在C++11中，auto不能直接用于推导函数返回类型，需要使用后置返回类型
+auto sum(int a1, int a2)->int {return a1 + a2;}
+
+// 但是，当使用函数模板时
+template<typename T>
+T sum(T a1, T a2) {return a1 + a2;}
+auto x1 = sum(5, 5.0);  // 编译失败，无法确定T的类型
+
+// 因此只能编写一个更宽泛的模板
+template<typename R, typename T1, typename T2>
+R sum(T1 a1, T2 a2) {return a1 + a2;}
+auto x2 = sum<double>(5, 5.0);
+
+// 如果想让编译器完成返回值类型推导
+template<typename T1, typename T2>
+auto sum(T1 a1, T2 a2)->decltype(a1 + a2) {return a1 + a2;}
+auto x3 = sum(5, 5.0);
+
+// C++14
+// C++14已经支持返回类型推导
+template<typename T1, typename T2>
+auto sum(T1 a1, T2 a2) {return a1 + a2;}
+auto x4 = sum(5, 5.0);
+
+// 但是在返回引用时
+template<typename T>
+auto return_ref(T& t) {return t;}
+int x1;
+static_assert(
+    std::is_reference_v<
+        decltype(return_ref(x1))>);     // 编译错误，返回值不是引用
+// 因为auto被推导为值类型
+
+// 这时用到decltype
+template<typename T>
+auto return_ref(T& t)->decltype(t) {return t;}
+int x1;
+static_assert(
+    std::is_reference_v<
+        decltype(return_ref(x1))>);     // 编译成功
+
+// decltype(e)的推导规则
