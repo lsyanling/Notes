@@ -188,7 +188,7 @@ auto t3 = &typeid(int); // t2是const std::type_info*
 int x1 = 0;
 double x2 = 1.0;
 decltype(x1) x3 = 1;    // x3是int
-decltype(x1 + x2) x4 = x1 + x2;     // x1 + x3是double
+decltype(x1 + x2) x4 = x1 + x2;     // x1 + x2是double
 
 // auto不能在非静态成员变量中使用，但decltype可以
 struct S1{
