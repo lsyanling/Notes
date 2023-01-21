@@ -110,7 +110,7 @@ auto k = j;		// auto是int而非int&
 // 使用auto和万能引用声明变量时，如果目标对象是左值，将推导为引用类型
 int i = 5;
 auto&& m = i;	// auto是int&，m是int&，引用折叠
-auto&& j = i;	// auto是int
+auto&& j = 5;	// auto是int
 
 // 使用auto声明变量，如果目标对象是数组或函数，则auto会被推导为对应的指针类型
 int i[5];
@@ -246,3 +246,79 @@ static_assert(
         decltype(return_ref(x1))>);     // 编译成功
 
 // decltype(e)的推导规则
+// e的类型为T
+// 如果e是一个不加括号的标识符表达式（除了结构化绑定外）或者不加括号的类成员访问，则推导的类型是e的类型T，如果不存在这样的类型或者e是一组重载函数，则推导失败
+// 如果e是一个函数调用或仿函数调用，则推导的类型是其返回值类型
+// 如果e是一个类型为T的左值，则推导的类型是T&
+// 如果e是一个类型为T的将亡值，则推导的类型是T&&
+// 除上述之外的情况，推导为T
+
+const int&& foo();
+int i;
+struct A{double x;};
+const A* a = new A();
+
+decltype(foo());    // 推导为const int&&
+decltype(i);        // int
+decltype(a->x);     // double
+decltype((a->x));   // 带括号，是左值，且a是const指针，推导为const double&
+
+const int&& foo();
+int i;
+int *j;
+int n[10];
+
+decltype(static_cast<short>(i));    // decltype(static_cast<short>(i))推导类型为short
+decltype(j);        // decltype(j)推导类型为int*
+decltype(n);        // decltype(n)推导类型为int[10]
+decltype(foo);      // 不是函数调用，而是函数指针，指向位置不可改变，推导类型为const int&& (void)
+
+struct A {
+  int operator() () { return 0; }
+};
+
+A a;
+decltype(a());      // a是仿函数，decltype(a())推导为返回值类型int
+
+int i;
+int *j;
+int n[10];
+decltype(i = 0);                    // 左值，decltype(i = 0)推导类型为int&
+decltype(0, i);                     // 逗号表达式，左值，decltype(0, i)推导类型为int&
+decltype(i, 0);                     // 逗号表达式，字面量，decltype(i, 0)推导类型为int
+decltype(n[5]);                     // 左值，decltype(n[5])推导类型为int&
+decltype(*j);                       // 左值，decltype(*j)推导类型为int&
+decltype(static_cast<int&&>(i));    // 将亡值，decltype(static_cast<int&&>(i))推导类型为int&&
+decltype(i++);                      // 纯右值，decltype(i++)推导类型为int
+decltype(++i);                      // 左值，decltype(++i)推导类型为int&
+decltype("hello world");            // 字符串字面量，const，左值，decltype("hello world")推导类型为const char(&)[12]
+
+// cv限定符的推导
+// 通常情况下，decltype(e)所推导的类型会同步e的cv限定符
+const int i = 0;
+decltype(i);        // decltype(i)推导类型为const int
+// 但当e是不加括号的成员变量时，父对象表达式的cv限定符会被忽略，不能同步到推导结果
+struct A {
+    double x;
+};
+const A* a = new A();
+decltype(a->x);    // decltype(a->x)推导类型为double, const属性被忽略
+// 如果加上括号，则能够同步父对象的cv限定符
+decltype((a->x));    // decltype((a->x))推导类型为const double
+
+// C++14
+// decltype(auto)
+// 让编译器使用decltype的推导规则来推导auto
+// decltype(auto)不能结合指针、引用和cv限定符
+int i;
+int&& f();
+auto x1a = i;                   // x1a推导类型为int
+decltype(auto) x1d = i;         // x1d推导类型为int
+auto x2a = (i);                 // x2a推导类型为int
+decltype(auto) x2d = (i);       // x2d推导类型为int&
+auto x3a = f();                 // x3a推导类型为int
+decltype(auto) x3d = f();       // x3d推导类型为int&&
+auto x4a = { 1, 2 };            // x4a推导类型为std::initializer_list<int>
+decltype(auto) x4d = { 1, 2 };  // 编译失败, {1, 2}不是表达式
+auto *x5a = &i;                 // x5a推导类型为int*
+decltype(auto)*x5d = &i;        // 编译失败，decltype(auto)必须单独声明
