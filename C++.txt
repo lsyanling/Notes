@@ -58,7 +58,7 @@ cout << std::hex
 \u后接8个十六进制位，\U后接16个十六进制位，表示ISO 10646码点
 
 char默认情况下既不是有符号也不是无符号，取决于实现
-因此可以使用signed char和unsigned char显示设置
+因此可以使用signed char和unsigned char显式设置
 
 wchar_t宽字符类型可以表示扩展字符集，cin和cout将输入输出看作char流，因此要使用wcin和wcout处理wchar_t流
 
