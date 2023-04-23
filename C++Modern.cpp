@@ -223,7 +223,7 @@ auto sum(T1 a1, T2 a2)->decltype(a1 + a2) {return a1 + a2;}
 auto x3 = sum(5, 5.0);
 
 // C++14
-// C++14已经支持返回类型推导
+// C++14已经支持函数模板的返回类型推导
 template<typename T1, typename T2>
 auto sum(T1 a1, T2 a2) {return a1 + a2;}
 auto x4 = sum(5, 5.0);
@@ -321,4 +321,73 @@ decltype(auto) x3d = f();       // x3d推导类型为int&&
 auto x4a = { 1, 2 };            // x4a推导类型为std::initializer_list<int>
 decltype(auto) x4d = { 1, 2 };  // 编译失败, {1, 2}不是表达式
 auto *x5a = &i;                 // x5a推导类型为int*
-decltype(auto)*x5d = &i;        // 编译失败，decltype(auto)必须单独声明
+decltype(auto)*x5d = &i;        // 编译失败，decltype(auto)必须单独声明，不能结合指针、引用、cv限定符
+
+// C++17
+// decltype(auto)作为非类型模板形参占位符，推导规则与上述相同
+template <decltype(auto) N>
+void f()
+{
+    std::cout << N << std::endl;
+}
+
+static const int x = 11;
+static int y = 7;
+
+int main()
+{
+    f<x>();   // N为const int类型
+    f<(x)>(); // N为const int&类型
+    f<y>();   // 编译错误，y不是一个常量，无法实例化函数模板
+    f<(y)>(); // N为int&类型，(y)被推断为引用类型，恰好静态对象的内存地址是固定的
+}
+
+// C++11
+// 函数返回类型后置
+auto foo() -> int { return 42; }
+
+// 当函数返回函数指针时，传统函数声明无法将函数指针类型作为返回类型，需要创建别名
+int bar_impl(int x) { return x; }
+typedef int (*bar)(int);    // bar是一个函数指针
+bar foo1() { return bar_impl; }
+
+// 函数返回类型后置，auto作为返回类型占位符，在->后声明返回的函数指针类型int (*)(int)即可
+auto foo2() -> int (*)(int) { return bar_impl; }
+
+// C++11
+// 返回类型后置与auto、decltype结合，推导函数模板的返回类型
+template <class T1, class T2>
+auto sum1(T1 t1, T2 t2) -> decltype(t1 + t2)
+{
+    return t1 + t2;
+}
+
+// 只使用decltype，不使用auto占位符
+// 一种容易理解的写法，但是这种写法可能存在问题
+// 虽然编译器在推导表达式类型的时候并没有真正计算表达式，但是会检查表达式是否正确，所以仍然要求T1和T2的默认构造函数必须存在
+template <class T1, class T2>
+decltype(T1() + T2()) sum2(T1 t1, T2 t2)
+{
+    return t1 + t2;
+}
+
+// 函数模板sum3使用指针类型转换和解引用求和的方法推导返回值
+// *static_cast<T1*>(nullptr) + *static_cast<T2*>(nullptr)将nullptr转换为T1和T2的指针类型，然后解引用求和，最后利用decltype推导出求和后的对象类型
+// 由于编译器不会真的计算求值，因此这里求和操作不会有问题
+template <class T1, class T2>
+decltype(*static_cast<T1*>(nullptr) + *static_cast<T2*>(nullptr)) sum3(T1 t1, T2 t2)
+{
+    return t1 + t2;
+}
+
+// 标准库提供了一个std::declval函数模板声明，它将类型T转换成引用类型，这样在使用decltype推导表达式类型时不必经过构造函数检查
+// 这是declval的一个简化声明，declval<T1>() + declval<T2>()表达式分别通过declval将T1和T2转换为引用类型并且求和，最后通过decltype推导返回类型
+template <class T>
+T &&declval();
+
+template <class T1, class T2>
+decltype(declval<T1>() + declval<T2>()) sum4(T1 t1, T2 t2)
+{
+    return t1 + t2;
+}
+
