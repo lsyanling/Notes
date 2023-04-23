@@ -271,7 +271,7 @@ int n[10];
 decltype(static_cast<short>(i));    // decltype(static_cast<short>(i))推导类型为short
 decltype(j);        // decltype(j)推导类型为int*
 decltype(n);        // decltype(n)推导类型为int[10]
-decltype(foo);      // 不是函数调用，而是函数指针，指向位置不可改变，推导类型为const int&& (void)
+decltype(foo);      // 不是函数调用，而是函数指针，推导类型为const int&& (void)
 
 struct A {
   int operator() () { return 0; }
