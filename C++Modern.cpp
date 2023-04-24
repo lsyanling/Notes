@@ -479,7 +479,6 @@ BigMemoryPool my_pool3 = static_cast<BigMemoryPool&&>(my_pool1);
 // 无论一个函数的实参是左值还是右值，其形参都是一个左值，即使这个形参看上去是一个右值引用
 // 例如函数move_pool()中的pool，尽管它是一个右值引用，但作为形参仍然是一个左值
 void move_pool(BigMemoryPool&& pool) {
-    std::cout << "call move_pool" << std::endl;
     BigMemoryPool my_pool(pool);
 }
 // 在下面的代码中，move_pool函数的实参是make_pool函数返回的临时对象，也是一个右值
@@ -537,3 +536,121 @@ auto&& z = get_val();
 // 反之，如果源对象是一个右值，则会推导出右值引用，不过无论如何都会是一个引用类型。
 
 // 万能引用能够起作用是因为C++11中有一套引用叠加推导的规则，即引用折叠，这套规则规定了在不同的引用类型互相作用的情况下应该如何推导出最终类型
+// 引用折叠
+// 类模板型    T实际类型   最终类型
+// T&          R           R&
+
+// T&          R&          R&
+
+// T&          R&&         R&
+
+// T&&         R           R&&
+
+// T&&         R&          R&
+
+// T&&         R&&         R&&
+// 上述规则里，只要有左值参与，推导类型就是左值引用
+// 万能引用对左值推导为左值引用，对右值推导为右值引用
+
+// 转发函数
+// normal_forwarding()可以完成对字符串的转发，但是需要复制
+template <class T>
+void show_type(T t) {
+    std::cout << typeid(t).name() << std::endl;
+}
+
+template <class T>
+void normal_forwarding(T t) { show_type(t); }
+
+int main() {
+    std::string s = "hello world";
+    normal_forwarding(s);
+}
+
+// 如果将上述normal_forwarding()的参数改为T&，就无法转发右值
+std::string get_string() { return "hi world"; }
+int main() {
+    normal_forwarding(get_string()); // 编译失败
+}
+
+// 同样，如果将normal_forwarding()的参数改为const T&，就无法修改转发的内容
+
+// C++11
+// 完美转发
+// perfect_forwarding()通过万能引用实现，如果实参是左值，则形参被推导为左值引用，如果实参是右值，则形参被推导为右值引用
+// 无论传递的是左值还是右值都可以被转发，而且不会发生多余的临时复制
+template <class T>
+void perfect_forwarding(T&& t) {
+    // t作为形参是一个左值，为了让转发将左右值的属性也带到目标函数中，这里需要进行类型转换
+    // 当实参是一个左值时，T被推导为std::string&，于是static_cast<T&&>被推导为static_cast<std::string&>，传递到show_type函数时保持了左值引用的属性
+    // 当实参是一个右值时，T被推导为std::string，于是static_cast<T&&>被推导为static_cast<std::string&&>，传递到show_type函数时保持了右值引用的属性
+    show_type(static_cast<T&&>(t));
+}
+int main() {
+    std::string s = "hello world";
+    perfect_forwarding(s);
+    perfect_forwarding(get_string());
+}
+
+// C++11
+// std::forward
+// 和std::move一样，C++11提供了一个std::forward函数模板，其内部也使用static_cast进行类型转换
+// 使用std::forward转发语义会表达得更加清晰，注意模板实参是T而不是T&&
+template<class T>
+void perfect_forwarding(T&& t) {
+    show_type(std::forward<T>(t));
+}
+
+
+// C++20
+// 右值引用和throw的移动操作
+// 在C++20之前，由于return的x作为形参是一个左值，返回应调用复制构造函数，除非调用std::move进行转换
+// 但由于x是一个右值引用，存在优化的空间
+X f(X &&x) {
+    return x;
+}
+int main() {
+    X r = f(X{});
+}
+// 因此，对于一个非易失或一个右值引用的非易失自动存储对象，在下面两种情况下可以使用移动代替复制
+// return或者co_return语句中的返回对象是函数或者lambda表达式中的对象或形参
+// throw语句中抛出的对象是函数或try代码块中的对象
+void f() {
+    X x;
+    throw x;
+}
+int main() {
+    try {
+        f();
+    }
+    catch (...) {}
+}
+// 函数f不再有返回值，它通过throw抛出x，main函数用try-catch捕获f抛出的x，这个捕获调用的就是移动构造函数
+
+
+// 复制消除
+// 在以下情况，对象将直接构造到它们本来要复制/移动到的存储中
+// 即使复制/移动构造函数和析构函数拥有可观察的副作用
+// 复制构造和移动构造函数不必存在或可访问
+
+// C++11
+// 在 return 语句中，当操作数是一个与函数返回类型相同的类类型的纯右值（忽略 cv 限定）时
+// 返回类型的析构函数必须在 return 语句位置可访问且未被删除，即使没有对象要被销毁
+X f() {
+    return X();
+}
+f();        // 只调用一次 X 的默认构造函数
+
+// C++17
+// 在对象的初始化中，当初始化器表达式是一个与变量类型相同的类类型的纯右值（忽略 cv 限定）时
+X x = X(X(f()));    // 只调用一次 X 的默认构造函数以初始化 x
+// 该规则只能在已知要初始化的对象不是可能重叠的子对象时应用    TODO 比较复杂，以后再看cppreference
+
+// 描述C++17语义的另一种方式是 [传递未实质化的值]，返回并使用纯右值时不实质化临时量
+
+
+// lambda表达式
+// C++11的定义：[captures] (params) specifiers exception -> ret { body }
+auto foo = [x](int y) -> int { return x * y; };
+
+// 能被捕获的变量必须是一个自动存储期变量
