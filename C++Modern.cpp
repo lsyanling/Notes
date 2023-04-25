@@ -1,5 +1,6 @@
 #include <iostream>
 #include <map>
+#include <vector>
 #include <future>
 
 // 调用约定
@@ -798,3 +799,24 @@ mymap1 = mymap2;    // 允许赋值
 
 // C++11
 // 非静态数据成员默认初始化
+// 不能使用()初始化成员变量，这将被认为是一个方法，从而存在歧义
+struct A{
+    static int x;
+    int a(x);
+};
+struct B{
+    typedef int x;
+    int a(x);
+};
+// 另一种情况是下面这样的构造
+std::vector<int> x(3);   // 3个元素的vector
+std::vector<int> x{3};   // 1个元素3的vector
+// 因此必须使用适当的符号
+std::vector<int> x = std::vector<int>(3); // 而非 vector<int> x(3);
+std::vector<int> x{3};               // 1个元素3的vector
+
+// 另外，也不能使用auto初始化非静态成员变量
+struct A{
+    auto i = 0;     // 编译错误
+};
+// 原因是可能用一个auto成员变量初始化一个static成员变量
