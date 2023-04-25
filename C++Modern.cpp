@@ -1,4 +1,6 @@
-#include<iostream>
+#include <iostream>
+#include <map>
+#include <future>
 
 // 调用约定
 // 调用约定写在函数返回类型的后面，函数名的前面
@@ -653,4 +655,146 @@ X x = X(X(f()));    // 只调用一次 X 的默认构造函数以初始化 x
 // C++11的定义：[captures] (params) specifiers exception -> ret { body }
 auto foo = [x](int y) -> int { return x * y; };
 
-// 能被捕获的变量必须是一个自动存储期变量
+// 能被捕获的变量必须是一个自动存储期变量，但局部静态变量和全局变量可以直接在表达式体里使用
+
+// 捕获值是将函数作用域的x和y的值复制到lambda表达式对象的内部
+// 但无法改变捕获变量的值，因为捕获变量默认为常量，或者说lambda是一个常量函数（类似于常量成员函数）
+// 捕获引用在变量前加&，但不是取地址，可以改变引用变量的值
+
+// specifiers 说明符 mutable
+// mutable 可以移除捕获变量的常量性
+// 如果存在说明符，形参列表不能省略
+
+// 捕获值的变量在lambda表达式定义时已经固定了，无论函数在lambda表达式定义后如何修改外部变量的值，lambda表达式捕获的值都不会变化
+
+// [this] 捕获this指针，捕获this指针可以让我们使用this类型的成员变量和函数
+// [=]    捕获lambda表达式定义作用域的全部变量的值，在C++11也捕获this，但在C++20不允许用[=]隐式捕获this，应写作[=, this]
+// [&]    捕获lambda表达式定义作用域的全部变量的引用，包括this
+
+// 捕获this指针后可以直接使用私有成员变量和方法
+
+// 无状态的lambda表达式可以隐式转换为函数指针
+void f(void (*)()) {}
+void g() {
+    f([] {});
+}
+// 因此也可以对无状态的lambda表达式解引用以匹配函数引用
+void f(void (&)()) {}
+void g() {
+    f(*[] {});
+}
+
+// C++14
+// 广义捕获
+// C++11只允许简单捕获，即捕获lambda表达式定义上下文的变量，无法捕获表达式结果，无法自定义捕获变量名
+// C++14允许初始化捕获
+int main()
+{
+    int x = 5;
+    // 赋值表达式通过等号跨越了两个作用域，等号=左边的变量 x 存在于lambda表达式的作用域，等号=右边的 x 存在于main函数的作用域，两个 x 不同
+    auto foo = [x = x + 1] { return x; };
+    // 如果在foo2的表达式体中出现x，则会出现编译错误
+    auto foo2 = [r = x + 1] { return r; };
+
+    // 可以在初始化捕获中使用移动操作
+    std::string x = "hello c++ ";
+    auto foo = [x = std::move(x)] { return x + "world"; };
+}
+
+// 在异步调用时复制this对象，防止lambda表达式被调用时因原始this对象被析构造成未定义的行为
+class Work
+{
+private:
+    int value;
+public:
+    Work() : value(42) {}
+    std::future<int> spawn() {
+        // 错误
+        return std::async(
+            [=]() -> int { return value; }
+        );
+        // tmp复制了this对象，在C++17中不需要tmp，见下文
+        return std::async(
+            [=, tmp = *this]() -> int { return tmp.value; }
+        );
+    }
+};
+std::future<int> foo() {
+    Work tmp;
+    return tmp.spawn();
+}
+int main()
+{
+    std::future<int> f = foo();
+    f.wait();
+    std::cout << "f.get() = " << f.get() << std::endl;
+}
+
+// C++14
+// 泛型lambda
+int main()
+{
+    // 泛型lambda在形参列表使用auto占位符，不需要template关键字
+    auto foo = [](auto a) { return a; };
+    int three = foo(3);
+    char const *hello = foo("hello");
+}
+
+// C++17
+// 常量lambda，见constexpr
+
+// C++17
+// *this捕获
+// 在捕获中直接添加[*this]，可以生成一个*this对象的副本并存储在lambda表达式，可以像this捕获一样直接访问这个副本
+class Work
+{
+private:
+    int value;
+public:
+    Work() : value(42) {}
+    std::future<int> spawn() {
+        // 不需要初始化tmp，可以直接访问value
+        return std::async(
+            [=, *this]() -> int { return value; }
+        );
+    }
+};
+
+// C++20
+// [=, this]捕获
+// 为了区分[=, this]和[=, *this]，标准要求应当用[=, this]代替[=]
+[=, this] {};
+[=, *this] {};
+// 不允许同时使用两种语法捕获this
+[this, *this]{};    // 编译错误
+
+// C++20
+// 模板泛型lambda
+// C++14的泛型lambda使用auto占位符，但这带来两个问题
+// 普通的函数模板可以通过形参模式匹配一个实参为vector的容器对象，但泛型lambda表达式的auto不具备这种表达能力
+// 同样，auto语法也使得难以获取vector所存储对象的类型
+
+// 模板泛型lambda的语法为   []<typename T>(T t) {}
+// 因此上述例子可以写成
+int main()
+{
+    auto f = []<typename T>(std::vector<T> vector) {};      // 匹配vector
+    auto f = []<typename T>(T const &x) {
+        T copy = x;
+        // 获取容器存储对象的类型
+        using Iterator = typename T::iterator;
+    };
+}
+
+// C++20
+// 可构造和可赋值的无状态lambda表达式
+// 在C++20之前，无状态的lambda表达式可以隐式转换为函数指针，但是其默认构造函数和复制赋值运算符函数是被删除的
+// 下面的代码在C++20才能运行
+auto greater = [](auto x, auto y) { return x > y; };
+std::map<std::string, int, decltype(greater)> mymap;    // 允许获取greater的类型用于构造
+std::map<std::string, int, decltype(greater)> mymap1, mymap2;
+mymap1 = mymap2;    // 允许赋值
+
+
+// C++11
+// 非静态数据成员默认初始化
