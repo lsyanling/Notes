@@ -987,7 +987,41 @@ int main() {
     foo(58);        // 隐式调用type(long long)
 }
 
+// C++11
+// 非受限联合类型 union
+// union 的成员可以是除了引用类型外的所有类型
+// 如果 union 中存在非平凡类型，那么这个 union 的特殊成员函数将被隐式删除，必须自己提供 union 的构造函数和析构函数
+union U {
+    U() {}  // 存在非平凡类型std::string和std::vector<int>的成员，必须提供构造函数
+    ~U() {} // 必须提供析构函数
+    int x1;
+    float x2;
+    std::string x3;
+    std::vector<int> x4;
+};
+int main() {
+    U u;
+    u.x3 = "hello world";
+    std::cout << u.x3;
+}
+// 可以通过编译，但实际上是有问题的，因为非平凡类型 x3 并没有被构造，在赋值时必然会出错
+// 使用 placement new 构造，手动析构
+int main() {
+    U u;
+    new (&u.x3) std::string("hello world");
+    std::cout << u.x3 << std::endl;
+    u.x3.~basic_string();
+
+    new (&u.x4) std::vector<int>;
+    u.x4.push_back(58);
+    std::cout << u.x4[0] << std::endl;
+    u.x4.~vector();
+}
+
+// union 的静态成员不属于 union 的任何对象，和类一样，不能在 union 的内部初始化
+
+// TODO: 使用std:: variant来代替 union
+
 
 // C++11
-// 非受限联合
-// 联合类型的成员可以是除了引用类型外的所有类型
+// 委托构造函数
