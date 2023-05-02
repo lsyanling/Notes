@@ -1,5 +1,6 @@
 #include <iostream>
 #include <map>
+#include <string>
 #include <vector>
 #include <future>
 
@@ -103,7 +104,7 @@ auto* k = &i;	// auto是const int，k是const int*
 auto& m = i;	// auto是const int，m是const int&
 
 // auto本身支持添加cv限定符
-const auto u = j;
+const auto n = j;
 
 // 使用auto声明变量初始化时，如果目标对象是引用，则引用属性会被忽略
 int i = 5;
@@ -819,4 +820,174 @@ std::vector<int> x{3};               // 1个元素3的vector
 struct A{
     auto i = 0;     // 编译错误
 };
-// 原因是可能用一个auto成员变量初始化一个static成员变量
+// 原因是如果支持，就可能出现用auto成员变量初始化static成员变量的情况
+
+// C++20
+// 位域默认初始化
+struct S {
+    int y : 8 = 11;
+    int z : 4 {7};
+};
+
+// C++11
+// 列表初始化
+// std::initializer_list是一个支持begin、end以及size成员函数的类模板
+// 实现一个以std::initializer_list为参数的构造函数，即可使用列表初始化
+struct A {
+	A(std::initializer_list<std::string> str) {
+		for (auto& i : str) {
+			std::cout << i;
+		}
+	}
+};
+// 如果有一个类同时拥有满足列表初始化的构造函数，且其中一个是以std::initializer_list为参数，那么编译器将优先以std::initializer_ list为参数构造函数
+std::vector<int> x1(5, 5);
+std::vector<int> x2{5, 5};
+
+// C++20
+// 指定初始化
+struct Point {
+    int x;
+    int y;
+};
+Point p{ .x = 4, .y = 2 };
+
+// 指定初始化的对象必须是一个聚合类型，下面的struct不能使用指定初始化
+struct Point3D {
+    Point3D() {}
+    int x;
+    int y;
+    int z;
+};
+// 指定的数据成员必须是非静态成员，且每个非静态成员最多只能初始化一次
+Point p{.y = 4, .y = 2};    // 错误
+
+// 非静态成员的初始化必须按照声明的顺序进行
+// 这一点和C语言中指定初始化的要求不同，在C语言中，乱序的指定初始化是合法的
+Point p{.y = 4, .x = 2};    // C++编译失败，C可以编译
+
+// 针对联合体中的数据成员只能初始化一次，不能同时指定
+union u {
+    int a;
+    const char *b;
+};
+u f = {.a = 1};              // 编译成功
+u g = {.b = "asdf"};         // 编译成功
+u h = {.a = 1, .b = "asdf"}; // 编译失败，同时指定初始化联合体中的多个数据成员
+
+// 不能嵌套指定初始化数据成员，这一点也与C语言不同，C语言允许嵌套指定初始化
+struct Line {
+    Point a;
+    Point b;
+};
+Line l{.a.y = 5};   // 编译失败，.a.y = 5访问了嵌套成员
+Line l{.a{.y = 5}}; // 但是可以这么做
+
+// 不能指定初始化数组，而这在C语言也是允许的，在C++中禁止的原因是与lambda表达式冲突
+int arr[3] = {[1] = 5}; // 编译失败
+
+
+
+// 类数据成员  来自cppreference
+
+// 非静态数据成员
+// 不允许使用 extern 和 register 存储类说明符
+
+// C++11
+// 不允许使用 thread_local 存储类说明符，但静态数据成员可以使用
+// 当存在至少一个用户定义的构造函数时，非静态数据成员不能拥有与类名相同的名字
+// 占位符类型说明符 auto、decltype(auto)(C++14)、待推导的类模板名(C++17)、受约束的占位符(C++20) 不能用于声明非静态数据成员，尽管允许将其用于类定义内初始化的静态数据成员
+
+// TODO: 布局，POD，聚合类型，平凡类型等
+
+
+
+
+// C++11
+// 默认和删除函数
+// 类的特殊函数：构造函数，析构函数，两个复制函数和两个移动函数
+
+// 声明任何构造函数后，将不会添加默认构造函数
+// 一旦用自定义构造函数代替默认构造函数，类就将转变为非平凡类型
+
+// 过去，通过将复制函数设为私有且不给出实现的方式禁用复制，但这并不完美
+// 用同样的方法禁用类的重载函数的某个版本时，会出现问题
+class Base {
+    void foo(long &);
+public:
+    void foo(int) {}
+};
+int main() {
+    Base b;
+    long l = 5;
+    b.foo(8);
+    b.foo(l);   // 编译错误，匹配了私有函数
+}
+// 在派生类中使用using引入基类foo函数时，using说明符无法将基类的私有成员函数引入派生类，编译失败
+class Derived : public Base {
+public:
+    using Base::foo;    // 错误
+    void foo(const char *) {}
+};
+
+// 显式默认 =default 可以添加到类外部，这使得可以不修改头文件而改变函数的行为，但显式删除 =delete 必须在类内部定义
+
+// 将构造函数替换为显式默认的，类就恢复成平凡类型
+class NonTrivial {
+    int i;
+public:
+    NonTrivial(int n) : i(n), j(n) {}
+    NonTrivial() {}
+    int j;
+};
+class Trivial {
+    int i;
+public:
+    Trivial(int n) : i(n), j(n) {}
+    Trivial() = default;
+    int j;
+};
+
+// 使用显式删除 =delete 禁用复制
+class NonCopyable {
+public:
+    NonCopyable() = default;    // 由于显式删除了复制构造函数，编译器将不再自动添加默认构造函数
+    NonCopyable(const NonCopyable &) = delete;
+    NonCopyable &operator=(const NonCopyable &) = delete;
+};
+// 解决禁止重载函数的继承问题
+class Base {
+public:
+    void foo(long &) = delete;  // 需要改为public，否则仍会编译错误
+    void foo(int) {}
+};
+class Derived : public Base {
+public:
+    using Base::foo;
+    void foo(const char *) {}
+};
+
+// 显式删除对普通函数也有效
+void foo() = delete;
+static void bar() = delete;
+// 可以用于 new 运算符和析构函数
+struct type {
+    void *operator new(std::size_t) = delete;   // 阻止类在堆上动态创建对象
+    ~type() = delete;                           // 阻止类通过自动变量、静态变量或者全局变量的方式创建对象，可以用new创建对象，但不能delete
+};
+
+// 不要同时使用 explicit 和 =delete
+struct type {
+    type(long long) {}
+    explicit type(long) = delete;
+};
+void foo(type) {}
+int main() {
+    foo(type(58));  // 显式调用type(long)，但被删除，编译失败
+    foo(58);        // 隐式调用type(long long)
+}
+
+
+// C++11
+// 非受限联合
+// 联合类型的成员可以是除了引用类型外的所有类型
