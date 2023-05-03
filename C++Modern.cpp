@@ -2,6 +2,7 @@
 #include <map>
 #include <string>
 #include <vector>
+#include <deque>
 #include <future>
 
 // 调用约定
@@ -1020,8 +1021,162 @@ int main() {
 
 // union 的静态成员不属于 union 的任何对象，和类一样，不能在 union 的内部初始化
 
-// TODO: 使用std:: variant来代替 union
+// TODO: 使用std::variant来代替 union
 
 
 // C++11
 // 委托构造函数
+
+// 面对多个构造函数中的冗余代码，如果将这些重复代码放在一个成员函数中供构造函数调用
+// 则本该是初始化成员变成了赋值，多一次赋值将影响程序效率，如果其赋值被禁用，甚至不能正常工作
+// 如果使用默认参数，容易引发二义性问题，有时也避免不了二次初始化
+
+// 委托构造函数将控制权交给代理构造函数(或称目标构造函数)
+// 一个构造函数可以同时是委托构造函数和代理构造函数
+// 复制构造函数也可以是委托构造函数
+// 如果一个构造函数为委托构造函数，那么其初始化列表里就不能对数据成员和基类进行初始化，因为一旦一个构造函数执行完毕，就认为这个对象已经被构造了，不能再对其初始化
+// 如果在代理构造函数执行完成后，委托构造函数主体抛出了异常，则自动调用该类型的析构函数
+
+// 委托模板构造函数，即代理构造函数是一个函数模板
+class X {
+    template <class T>
+    X(T first, T last) : l_(first, last) {}
+    std::list<int> l_;
+public:
+    X(std::vector<short> &);
+    X(std::deque<int> &);
+};
+X::X(std::vector<short> &v) : X(v.begin(), v.end()) {}  // 委托模板构造函数
+X::X(std::deque<int> &v) : X(v.begin(), v.end()) {}
+
+// 捕获委托构造函数和初始化列表的异常
+class X {
+public:
+    X()
+    try : X(0) {}
+    catch (int e) {
+        std::cout << "catch: " << e << std::endl;
+        throw 3;
+    }
+    X(int a)
+    try : X(a, 0.) {}
+    catch (int e) {
+        std::cout << "catch: " << e << std::endl;
+        throw 2;
+    }
+    X(double b) : X(0, b) {}
+    X(int a, double b) : a_(a), b_(b) { throw 1; }
+private:
+    int a_;
+    double b_;
+};
+int main() {
+    try {
+        X x;
+    }
+    catch (int e) {
+        std::cout << "catch: " << e << std::endl;   // 输出 1 2 3
+    }
+}
+
+// 通常，将参数较少的构造函数委托给参数较多的构造函数，这样做的自由度更高
+// 但是，如果构造函数的参数必须在函数体中使用，可以从参数较多的构造函数委托参数较少的构造函数
+
+// C++11
+// 继承构造函数
+// 使用using将基类的构造函数引入派生类
+class Base {
+public:
+    Base() : x_(0), y_(0.){};
+    Base(int x, double y) : x_(x), y_(y) {}
+    Base(int x) : x_(x), y_(0.) {}
+    Base(double y) : x_(0), y_(y) {}
+private:
+    int x_;
+    double y_;
+};
+class Derived : public Base {
+public:
+    using Base::Base;
+};
+// 继承构造函数是隐式生成的，只有在程序中使用了这些构造函数，编译器才会为派生类生成继承构造函数的代码
+// 派生类不会继承默认构造函数和复制构造函数，因为执行派生类的默认构造函数之前会先执行基类的构造函数
+// 同样地，在执行复制构造函数之前也会先执行基类的复制构造函数
+// 继承构造函数不会影响派生类默认构造函数的隐式声明，对于继承了基类构造函数的派生类，依然会自动生成派生类的默认构造函数
+// 在派生类中声明签名相同的构造函数会禁止继承相应的构造函数
+
+// 派生类同时继承多个签名相同的构造函数会导致编译失败
+class Base1 {
+public:
+    Base1(int) { std::cout << "Base1(int x)" << std::endl; };
+};
+class Base2 {
+public:
+    Base2(int) { std::cout << "Base2(int x)" << std::endl; };
+};
+class Derived : public Base1, Base2 {
+public:
+    using Base1::Base1;
+    using Base2::Base2;     // 编译失败
+};
+
+// 继承构造函数的基类构造函数不能为私有的
+class Base {
+    Base(int) {}
+public:
+    Base(double) {}
+};
+class Derived : public Base {
+public:
+    using Base::Base;   // 当执行Derived(5)的时候会产生错误
+};
+
+
+// C++11
+// 强枚举类型
+// 枚举标识符不会隐式转换为整型
+// 能指定强枚举类型的底层类型，底层类型默认为int类型
+enum class E : unsigned int {
+    e1 = 1,
+    e2 = 2,
+    e3 = 0xfffffff0
+};
+// C++11也允许指定枚举类型的底层类型
+enum E : unsigned int {
+    e1 = 1,
+    e2 = 2,
+    e3 = 0xfffffff0
+};
+// 强枚举类型是POD类型
+// 强枚举类型不允许匿名，必须给定一个类型名，普通枚举类型允许匿名
+enum {
+    e1 = 1,
+    e2 = 2,
+    e3 = 0xfffffff0
+};
+
+// C++17
+// 列表初始化有底层类型枚举对象
+enum class Color {  // 强枚举的底层类型是int
+    Red,
+    Green,
+    Blue
+};
+int main() {
+    Color c{5};         // 编译成功
+    Color c1 = 5;       // 编译失败
+    Color c2 = {5};     // 编译失败，注意这里不属于列表初始化
+    Color c3(5);        // 编译失败
+    Color c4 = Color{5};// 先初始化临时对象，再复制构造初始化
+}
+// C++17的std::byte就是用枚举定义的
+
+// C++20
+// using打开强枚举类型
+using enum Color;
+using Color::Red;
+Color c = Red;
+
+
+// C++17
+// 聚合类型
