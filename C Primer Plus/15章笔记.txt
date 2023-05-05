@@ -50,7 +50,7 @@ struct{
     unsigned int autfd : 1;
     unsigned int bldfc : 1;
     unsigned int undln : 1;
-    unsigned int itals :1;
+    unsigned int itals : 1;
 }prnt;
 prnt包含4个1位的字段，可以通过结构成员运算符单独给字段赋值
 prnt.itals = 0;

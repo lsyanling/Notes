@@ -4,6 +4,7 @@
 #include <vector>
 #include <deque>
 #include <future>
+#include <type_traits>
 
 // 调用约定
 // 调用约定写在函数返回类型的后面，函数名的前面
@@ -1180,3 +1181,52 @@ Color c = Red;
 
 // C++17
 // 聚合类型
+// 聚合类型的定义：
+// 没有用户提供的构造函数，没有私有的、保护的非静态数据成员，没有虚函数
+// 如果是派生类，还要求必须是公有继承、非虚继承
+// 注意，派生类是否为聚合类型与基类是否是聚合类型没有关系，只要满足上述条件，派生类就是聚合类型
+
+// C++20
+// 聚合类型的定义中，对构造函数的要求修改为没有用户声明或提供的构造函数，相比C++17，新增了 =default 和 =delete
+// 事实上，声明了 =delete 的构造函数说明该类不应该被默认构造，但是聚合类型可以避开 =delete 而构造对象
+// 此外，将 =default 的构造函数设为私有的也说明该类不应该被默认构造，聚合类型也可以避开 private 的限制
+// 因此，C++20在聚合类型的定义上新增了禁止用户声明的构造函数
+
+// 标准库 <type_traits> 的 is_aggregate 可以判断目标类型是否为聚合类型
+class myString : public std::string {};
+int main() {
+    std::is_aggregate_v<std::string>;   // 0
+    std::is_aggregate_v<myString>;      // 1
+}
+
+// 聚合类型的初始化
+// 之前，要初始化 myString 对象，需要为 myString 类提供一个构造函数，并在初始化列表中调用基类构造函数
+// C++17开始，只需要按继承顺序列表初始化基类，最后按顺序初始化数据成员
+struct Count {
+    int count;
+};
+struct myStringWithIndex : public std::string, public Count {
+    float size;
+    int index;
+};
+int main() {
+    myStringWithIndex s{"Hello World!", 11, 2.5, 0};
+}
+
+// 可以理解为聚合类型中，基类只是派生类中排列在前面的成员，构造时按顺序构造这些成员
+class Base {
+protected:
+	Base(){}
+};
+class Derived : public Base {
+public:
+	// Derived(){};
+};
+int main() {
+    // 无法通过编译，按顺序构造Base时发现构造函数是protect的，不可访问
+    // 提供一个 Derived 的默认构造函数，Derived 不再是聚合类型，将调用这个默认构造函数，并在其中调用 Base 的构造函数
+    // 在C++17中，如果提供的构造函数是 Derived() = default，仍不能通过编译
+    // 因为在C++17中，聚合类型允许用户声明 =deafult 的构造函数，C++20不再允许
+    Derived d{};
+}
+
