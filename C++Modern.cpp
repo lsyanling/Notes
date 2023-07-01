@@ -389,7 +389,7 @@ decltype(*static_cast<T1*>(nullptr) + *static_cast<T2*>(nullptr)) sum3(T1 t1, T2
 // 标准库提供了一个std::declval函数模板声明，它将类型T转换成引用类型，这样在使用decltype推导表达式类型时不必经过构造函数检查
 // 这是declval的一个简化声明，declval<T1>() + declval<T2>()表达式分别通过declval将T1和T2转换为引用类型并且求和，最后通过decltype推导返回类型
 template <class T>
-T &&declval();
+T&& declval();
 
 template <class T1, class T2>
 decltype(declval<T1>() + declval<T2>()) sum4(T1 t1, T2 t2)
@@ -741,7 +741,7 @@ int main()
     // 泛型lambda在形参列表使用auto占位符，不需要template关键字
     auto foo = [](auto a) { return a; };
     int three = foo(3);
-    char const *hello = foo("hello");
+    const char* hello = foo("hello");
 }
 
 // C++17
@@ -750,6 +750,7 @@ int main()
 // C++17
 // *this捕获
 // 在捕获中直接添加[*this]，可以生成一个*this对象的副本并存储在lambda表达式，可以像this捕获一样直接访问这个副本
+// 与[this]的区别是这是一个对象的副本
 class Work
 {
 private:
