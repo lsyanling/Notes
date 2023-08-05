@@ -1438,3 +1438,29 @@ int main()
         break;
     }
 }
+
+// 动态断言assert，标头文件cassert，通常在release版本中忽略
+// 断言可以用于对函数参数的判断，但不应该用于对用户输入的判断
+// 一个断言处理一个判别式，便于定位问题
+
+// C++11
+// 静态断言static_assert，可以在命名空间、类或代码块内使用
+// static_assert需要传入两个实参：常量表达式和诊断消息字符串
+#include <type_traits>
+class A{};
+class B : public A{};
+class C{};
+template <class T>
+class E{
+    static_assert(std::is_base_of<A, T>::value, "T is not base of A");
+};
+int main(int argc, char *argv[]){
+    static_assert(argc > 0, "argc > 0"); // 使用错误，argc>0不是常量表达式
+    E<C> x;                              // 使用正确，但由于A不是C的基类，所以触发断言
+    static_assert(sizeof(int) >= 4, "sizeof(int) >= 4"); // 使用正确，表达式返回真，不会触发失败断言
+    E<B> y; // 使用正确，A是B的基类，不会触发失败断言
+}
+
+// C++17
+// 单参数static_assert，诊断消息就是常量表达式自身
+static_assert(sizeof(int) >= 4);
