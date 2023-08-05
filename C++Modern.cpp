@@ -1232,3 +1232,209 @@ int main() {
     Derived d{};
 }
 
+// 上述标准的更改会导致旧的代码存在问题，下面是一个禁止复制构造的方法
+struct X
+{
+    std::string s;
+    std::vector<int> v;
+    X() = default;
+    X(const X &) = delete;
+    X(X &&) = default;
+};
+// 在C++17中，X是聚合类型，但更新到C++20以后，原来聚合类型初始化的代码将引发错误
+// 可以通过加入或者继承一个不可复制构造的类型来实现类型的不可复制
+struct X
+{
+    std::string s;
+    std::vector<int> v;
+    [[no_unique_address]] NonCopyable nc;
+};
+// 或者
+struct X : NonCopyable
+{
+    std::string s;
+    std::vector<int> v;
+};
+// [[no_unique_address]] 是C++20提供的特性，指定了该属性的类，其数据成员的地址有可能和该类的其他非静态数据成员的地址相同
+
+// C++20
+// 圆括号列表初始化聚合类型对象
+struct X
+{
+    int i;
+    float f;
+};
+X x(11, 7.0f);  // C++17不允许，无法匹配到构造函数
+// 圆括号列表初始化支持缩窄转换
+
+// C++11
+// override 和 final 说明符
+// 编译器将指出下列4个函数重写失败
+class Base
+{
+public:
+    virtual void some_func() {}
+    virtual void foo(int x) {}
+    virtual void bar() const {}
+    void baz() {}
+};
+
+class Derived : public Base
+{
+public:
+    virtual void sone_func() override {}
+    virtual void foo(int &x) override {}
+    virtual void bar() override {}
+    virtual void baz() override {}
+};
+
+// final 告诉编译器该虚函数不能被派生类重写
+struct Base {
+    virtual void foo(int x) {}
+};
+struct Derived : public Base {
+    void foo(int x) final{};
+};
+struct Derived2 : public Derived {
+    void foo(int x){};
+};
+// final 可以修饰最底层基类的虚函数，但 override 不可以
+// override和final可以同时出现，通常是因为中间派生类继承基类，且希望后续的派生类不能修改本类虚函数的行为
+
+// final说明符不仅能声明虚函数，还可以声明类
+struct Base final {
+  virtual void foo(int x) {}
+};
+
+// C++11
+// range base for
+// std::for_each(begin, end, func)
+
+// 基于范围的for循环由一个范围声明和一个范围表达式组成
+// 其中，范围声明是一个变量的声明，其类型是范围表达式中元素的类型或者元素类型的引用
+// 而范围表达式可以是数组或对象，对象必须满足以下条件
+// 对象类型定义了begin和end成员函数  或  定义了以对象类型为参数的begin和end普通函数
+
+// C++17
+// begin和end函数不必返回相同类型
+// C++11要求range base for的begin和end函数的返回类型必须相同
+{
+  auto &&__range = range_expression;
+  for (auto __begin = begin_expr, __end = end_expr; __begin != __end; ++__begin)
+  {
+        range_declaration = *__begin;
+        loop_statement
+  }
+}
+// 但实际上只需要确保 __begin != __end 能返回一个有效的布尔值即可，故C++17取消了限制
+{
+  auto &&__range = range_expression;
+  auto __begin = begin_expr;
+  auto __end = end_expr;
+  for (; __begin != __end; ++__begin)
+  {
+        range_declaration = *__begin;
+        loop_statement
+  }
+}
+// 注意，在上述伪代码中，范围表达式被一个右值引用所引用
+// 如果范围表达式是一个纯右值，则右值引用将会扩展其生命周期
+// 但如果范围表达式是一个泛左值，由于右值引用无法扩展泛左值的生命周期，可能访问无效的对象
+class T {
+  std::vector<int> data_;
+public:
+  std::vector<int>& items() { return data_; }
+  // …
+};
+T foo() {
+    T t;
+    return t;
+}
+for (auto& x : foo().items()) {}    // 未定义行为
+// 因此需要将数据复制出来
+T thing = foo();
+for (auto &x : thing.items()) {}
+
+// C++20
+// range base for的初始化语句
+for (T thing = foo(); auto &x : thing.items()) {}
+
+// 实现支持range base for的类
+// begin和end函数需要返回一组类似迭代器的对象，并且这组对象必须支持operator*、operator!=和前缀operator++运算符
+struct IntIter{
+    IntIter(int* p) : p_(p) {}
+    bool operator!=(const IntIter &other) {
+        return (p_ != other.p_);
+    }
+    const IntIter& operator++() {
+        p_++;
+        return *this;
+    }
+    int operator*() const {
+        return *p_;
+    }
+private:
+    int* p_;
+};
+template <unsigned int fix_size>
+struct FixIntVector
+{
+    FixIntVector(std::initializer_list<int> init_list) {
+        int* cur = data_;
+        for (auto e : init_list)
+        {
+            *cur = e;
+            cur++;
+        }
+    }
+    IntIter begin(){
+        return IntIter(data_);
+    }
+    IntIter end(){
+        return IntIter(data_ + fix_size);
+    }
+private:
+    int data_[fix_size]{0};
+};
+int main()
+{
+    FixIntVector<10> fix_int_vector{1, 3, 5, 7, 9};
+    for (auto e : fix_int_vector)
+    {
+        std::cout << e << std::endl;
+    }
+}
+
+// C++17
+// 支持初始化语句的if和switch
+// if初始化语句中声明的变量拥有和整个if结构一样长的生命周期，包括else和else if部分
+// 但else if部分的初始化语句中声明的变量的生命周期只存在于else if部分和后续的部分，无法在之前的if部分使用
+
+// 可以利用该特性对整个if结构加锁
+int main()
+{
+    std::mutex mx;
+    bool shared_flag = true;
+    if (std::lock_guard<std::mutex> lock(mx); shared_flag){
+        shared_flag = false;
+    }
+    // 不必在初始化语句中初始化判断条件的变量，如下判断条件为fgets函数的返回值
+    std::string str;
+    if (char buf[10]{0}; std::fgets(buf, 10, stdin)){
+        str += buf;
+    }
+}
+
+using namespace std::chrono_literals;
+std::condition_variable cv;
+std::mutex cv_m;
+int main()
+{
+    switch (std::unique_lock<std::mutex> lk(cv_m); cv.wait_for(lk, 100ms))
+    {
+    case std::cv_status::timeout:
+        break;
+    case std::cv_status::no_timeout:
+        break;
+    }
+}
