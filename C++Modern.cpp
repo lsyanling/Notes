@@ -1464,3 +1464,82 @@ int main(int argc, char *argv[]){
 // C++17
 // 单参数static_assert，诊断消息就是常量表达式自身
 static_assert(sizeof(int) >= 4);
+
+
+
+// 在C++11，可以通过元组让函数返回多个值
+std::tuple<int, int> return_multiple_values(){
+    return std::make_tuple(11, 7);
+}
+int main() {
+    int x = 0, y = 0;
+    std::tie(x, y) = return_multiple_values();
+}
+// 但是需要写出函数返回类型，且需要提前声明变量x和y
+// 在C++14，可以使用auto的新特性解决函数返回类型的问题
+
+// C++17
+// 结构化绑定
+// 结构化绑定是指将一个或者多个名称绑定到初始化对象中的一个或者多个子对象（或者元素）上
+// 相当于给初始化对象的子对象（或者元素）起了别名，注意，别名不同于引用
+int main() {
+    auto [x, y] = return_multiple_values();
+}
+// auto [x, y]是一个典型的结构化绑定声明，其中，auto是类型占位符，[x, y]是绑定标识符列表
+// x和y是用于绑定的名称，绑定的目标是函数返回结果副本的子对象或者元素
+
+// 结构化绑定的目标不必是一个函数的返回结果，实际上等号的右边可以是任意一个合理的表达式
+struct BindTest {
+    int a = 42;
+    std::string b = "hello structured binding";
+};
+int main() {
+    BindTest bt;
+    auto [x, y] = bt;
+    // 结构化绑定用于 range base for
+    std::vector<BindTest> btv{{11, "hello"}, {7, "c++"}, {42, "world"}};
+    for (const auto& [x, y] : btv) {
+        std::cout << "x=" << x << " y=" << y << std::endl;
+    }
+}
+
+// 在结构化绑定中，编译器会根据限定符生成一个等号右边对象的匿名副本，而绑定的对象正是这个副本而非原对象本身
+// 另外，这里的别名是单纯的别名而非引用，别名的类型和绑定目标对象的子对象类型相同
+BindTest bt;
+const auto [x, y] = bt;
+// 编译器大概会将上述代码转换成
+BindTest bt;
+const auto _anonymous = bt;
+aliasname x = _anonymous.a
+aliasname y = _anonymous.b
+// 其中，用了一个不存在的关键字 aliasname 来表示 x 和 y 是别名而非引用
+// 此外，auto的限定符将直接应用到匿名对象上
+
+// 如果要绑定原来的对象
+auto& [x, y] = bt;
+// 编译器将产生类似下面的代码
+BindTest bt;
+auto& _anonymous = bt;
+aliasname x = _anonymous.a
+aliasname y = _anonymous.b
+// 然而，如果采用 const auto& 将 bt.a 绑定到 x 上，不能通过 x 修改 bt.a
+// 因为 x 绑定的对象是一个常量引用，即使 bt 本身不存在常量问题
+
+// 使用结构化绑定无法忽略对象的子对象或元素
+auto t = std::make_tuple(42, "hello world");
+auto [x] = t;   // 错误
+
+// 可以使用 std::tie 和 std::ignore 来绑定
+auto t = std::make_tuple(42, "hello world");
+int x = 0, y = 0;
+std::tie(x, std::ignore) = t;
+std::tie(y, std::ignore) = t;
+
+// 然而，这对结构化绑定无效，因为结构化绑定的别名无法在同一个作用域中重复使用
+auto t = std::make_tuple(42, "hello world");
+auto [x, ignore] = t;
+auto [ignore, y] = t;   // 错误，ignore重复声明
+
+
+// 结构化绑定可以作用于原生数组、结构体和类对象、元组和类元组对象三种类型
+// 绑定到数组，要求别名数量与数组元素个数一致
