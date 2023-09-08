@@ -5,6 +5,7 @@
 #include <deque>
 #include <future>
 #include <type_traits>
+#include <tuple>
 
 // 调用约定
 // 调用约定写在函数返回类型的后面，函数名的前面
@@ -1543,3 +1544,108 @@ auto [ignore, y] = t;   // 错误，ignore重复声明
 
 // 结构化绑定可以作用于原生数组、结构体和类对象、元组和类元组对象三种类型
 // 绑定到数组，要求别名数量与数组元素个数一致
+int a[3]{1, 3, 5};
+auto [x, y, z] = a;
+// 注意，绑定时要小心数组的退化
+
+// 绑定到结构体和类对象
+// 非静态数据成员个数必须和标识符列表中的别名个数相同
+// 在C++20之前，这些数据成员必须是public
+// 这些数据成员必须在同一个类或基类中
+// 绑定的类和结构体中不能存在匿名联合
+struct BindBase3{
+    int a = 42;
+};
+struct BindTest3 : public BindBase3{
+    double b = 11.7;
+};
+BindTest3 bt3;
+auto [x3, y3] = bt3;    // 错误，数据成员不在同一个类中
+
+// 绑定到元组和类元组对象
+// 对于一个元组或类元组类型T，需要满足以下条件：
+// std::tuple_size<T>::value是一个符合语法的表达式，且该表达式获得的整数值与标识符列表中的别名个数相同
+// std::tuple_element<i, T>::type是一个符合语法的表达式，其中i是小于std::tuple_size<T>::value的整数，表达式代表类型T中第i个元素的类型
+// 类型T必须存在合法的成员函数模板get<i>()或函数模板get<i>(t)，其中i是小于std::tuple_size<T>::value的整数，t是类型T的实例，get<i>()和get<i>(t)返回的是实例t中第i个元素的值
+
+// 根据上述要求，std::pair和std::array也能称为结构化绑定的目标
+std::map<int, std::string> id2str{{1, "hello"}, {3, "Structured"}, {5, "bindings"}};
+for (const auto &elem : id2str){
+    std::cout << "id=" << elem.first
+                << ", str=" << elem.second << std::endl;
+}
+// 上面的elem可以简化如下
+for (const auto &[id, str] : id2str) {
+    std::cout << "id=" << id 
+                << ", str=" << str << std::endl;
+}
+
+// 实现类元组类型
+struct BindBase3{
+    int a = 42;
+};
+struct BindTest3 : public BindBase3{
+    double b = 11.7;
+};
+namespace std{
+    template <>
+    struct tuple_size<BindTest3>{
+        static constexpr size_t value = 2;
+    };
+
+    template <>
+    struct tuple_element<0, BindTest3>{
+        using type = int;
+    };
+
+    template <>
+    struct tuple_element<1, BindTest3>{
+        using type = double;
+    };
+}
+// 函数模板get<i>(t)
+template <std::size_t Idx>
+auto& get(BindTest3 &bt) = delete;
+
+// 模板特化
+template <>
+auto& get<0>(BindTest3 &bt) { return bt.a; }
+template <>
+auto& get<1>(BindTest3 &bt) { return bt.b; }
+
+int main() {
+    BindTest3 bt3;
+    auto& [x3, y3] = bt3;
+    x3 = 78;
+    std::cout << bt3.a << std::endl;
+}
+// 上述代码为 BindTest3 实现了3种特性以满足类元组的限制条件，从而可以进行结构化绑定
+
+// 成员函数的 get<i>()
+struct BindTest3 : public BindBase3 {
+    double b = 11.7;
+    template <std::size_t Idx>
+    auto& get() = delete;
+};
+template <>
+auto& BindTest3::get<0>() { return a; }
+template <>
+auto& BindTest3::get<1>() { return b; }
+
+// C++20
+// 结构化绑定不要求数据成员是public
+struct A{
+    friend void foo();
+private:
+    int i;
+};
+
+void foo()
+{
+    A a{};
+    auto x = a.i;   // 编译成功
+    auto [y] = a;   // 编译失败
+}
+// 在友元函数 foo() 中，结构化绑定和非结构化绑定的表现不一致
+// 同样的问题还出现在访问自身成员时，因此C++20取消了对数据成员访问权限的限制
+
