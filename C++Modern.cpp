@@ -1649,3 +1649,100 @@ void foo()
 // 在友元函数 foo() 中，结构化绑定和非结构化绑定的表现不一致
 // 同样的问题还出现在访问自身成员时，因此C++20取消了对数据成员访问权限的限制
 
+
+
+// C++11
+// noexcept说明符
+// noexcept可以接受一个返回bool的常量表达式，当表达式为false时表示函数有可能会抛出异常
+template <class T>
+T copy(const T &o) noexcept(std::is_fundamental<T>::value){}
+// 基本类型不会抛出异常，复杂类型可能抛出异常
+
+// noexcept运算符
+// noexcept运算符接受表达式参数，并返回true或false
+// 该常量表达式不会被执行，返回的结果取决于编译器是否在表达式中找到潜在的异常
+int foo() noexcept{
+    return 42;
+}
+int foo1(){
+    return 42;
+}
+int foo2() throw(){
+    return 42;
+}
+int main(){
+    std::cout << std::boolalpha;
+    std::cout << "noexcept(foo())  = " << noexcept(foo()) << std::endl;
+    std::cout << "noexcept(foo1()) = " << noexcept(foo1()) << std::endl;
+    std::cout << "noexcept(foo2()) = " << noexcept(foo2()) << std::endl;
+}
+// 结果如下
+noexcept(foo())  = true
+noexcept(foo1()) = false
+noexcept(foo2()) = true
+// 因此可以准确判断函数是否声明不会抛出异常
+template <class T>
+T copy(const T &o) noexcept(noexcept(T(o))) {}
+// 第二个noexcept是运算符，判断T(o)是否有可能抛出异常
+// 第一个noexcept是说明符，接受第二个运算符的返回值，以此决定T类型的copy函数是否声明为不抛出异常
+
+// 解决移动构造的异常问题
+template<class T>
+void swap(T& a, T& b) noexcept(noexcept(T(std::move(a))) && noexcept(a.operator=(std::move(b))))
+{
+    T tmp(std::move(a));
+    a = std::move(b);
+    b = std::move(tmp);
+}
+// 上面的代码检查T的移动构造和移动赋值是否都不会抛出异常，并移动a和b
+
+template <class T>
+void swap(T &a, T &b) noexcept(noexcept(T(std::move(a))) && noexcept(a.operator=(std::move(b))))
+{
+    // 断言T的移动构造和移动赋值都不会抛出异常，如果会抛出异常则编译失败
+    static_assert(noexcept(T(std::move(a)))
+                      && noexcept(a.operator=(std::move(b))));
+    T tmp(std::move(a));
+    a = std::move(b);
+    b = std::move(tmp);
+}
+// 下面是最终版本的移动函数，在移动构造和移动赋值可能抛出异常时调用复制构造和复制赋值
+template <typename T>
+void swap_impl(T &a, T &b, std::integral_constant<bool, true>) noexcept
+{
+    T tmp(std::move(a));
+    a = std::move(b);
+    b = std::move(tmp);
+}
+template <typename T>
+void swap_impl(T &a, T &b, std::integral_constant<bool, false>){
+    T tmp(a);
+    a = b;
+    b = tmp;
+}
+template <typename T>
+void swap(T &a, T &b) noexcept(
+    noexcept(
+        swap_impl(a, b, std::integral_constant<bool, noexcept(T(std::move(a))) 
+        && noexcept(a.operator=(std::move(b)))>())
+    )
+){
+    swap_impl(a, b, std::integral_constant<bool, noexcept(T(std::move(a))) && noexcept(a.operator=(std::move(b)))> ());
+}
+// 实际上，noexcept运算符中的常量表达式可以用下面的模板函数代替
+std::is_nothrow_move_constructible<T>::value && std::is_nothrow_move_ assignable<T>::value;
+
+// 默认带有noexcept声明的函数
+// 编译器生成的默认构造函数，默认复制构造，默认复制赋值，默认移动构造，默认移动赋值
+// 前提是对应的函数在基类和成员中也具有noexcept声明
+// 析构函数和delete运算符具有noexcept声明，即使是自定义实现的，除非该类型或其基类和成员明确使用了noexcept(false)声明析构函数和delete运算符
+
+// C++17
+// 异常规范作为类型系统的一部分
+void(*fp)() noexcept = nullptr;
+void foo() {}
+// 在C++17之前，std::is_same <decltype(fp), decltype(&foo)>::value的结果是true
+// 这种宽松的规则使得一个会抛出异常的函数通过一个保证不抛出异常的函数指针进行调用，结果该函数确实抛出了异常
+// C++17将异常规范引入类型系统，noexcept声明的函数指针无法接受没有noexcept声明的函数，反之则允许
+// 虚函数的重写也遵守这个规则，基类声明了noexcept派生类的虚函数也必须声明noexcept，否则虚函数的行为表现得不一致
+// 当基类没有声明noexcept时，派生类也可以声明noexcept
