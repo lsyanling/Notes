@@ -1794,3 +1794,69 @@ std::nullptr_t myNull;  // myNull是左值，因此可以对myNull取地址 &myN
 // 使用nullptr可以为函数模板或者类设计一些空指针类型的特化版本，在C++11之前是无法实现的，因为NULL的推导类型是int
 
 
+
+// C++20
+// 三向比较(spaceship)运算符 <=>
+// <=>的结果只能与0和自身类型比较
+bool b = 7 <=> 11 < 100; // 错误
+// 因此，<=>的返回类型不是普通类型，而是以下三种类型之一
+// std::strong_ordering
+// std::weak_ordering
+// std::partial_ordering
+// 这三个类只实现了参数类型为自身类型和nullptr的比较运算符函数
+
+// std::strong_ordering
+// std::strong_ordering 有三种比较结果，分别是std::strong_ ordering::less，std::strong_ordering::equal和std::strong_ ordering::greater
+// std::strong_ordering 的比较结果强调可替换性，即如果 lhs <=> rhs 结果为std::strong_ordering::equal，则lhs和rhs在任何情况下都可以互换
+// int采用std::strong_ordering作为三向比较返回类型
+// 对于有复杂结构的类型，std::strong_ordering要求其数据成员和基类的三向比较结果都为std::strong_ordering
+
+// std::weak_ordering
+// 与std::strong_ordering一样，有三种比较结果，注意相等时的返回类型是std::weak_ordering::equivalent，与std::strong_ordering不同
+// std::weak_ordering表达的是不可替换性，即如果 lhs <=> rhs 结果为std::weak_ordering::equivalent，则lhs和rhs不可以替换
+// 这种情况在基本类型中没有，可能出现在自定义的类中
+// 例如，一个大小写不敏感的字符串类，在比较两个字符串时认为它们等价，但未必相等
+// 当std::weak_ordering和std::strong_ ordering同时出现在基类和数据成员的类型中时，该类型的三向比较结果是std::weak_ordering
+// 这种情况下，如果显式声明默认三向比较运算符函数为
+std::strong_ordering operator<=>(const D&) const = default;
+// 编译器将报错
+
+// std::partial_ordering
+// std::partial_ordering 有四种比较结果，分别是std::partial_ ordering::less，std::partial_ordering::equivalent，std::partial_ ordering::greater，std::partial_ordering::unordered
+// 其中，第四种结果表示进行比较的两个操作数没有关系
+// 浮点数float和double采用std::partial_ordering作为三向比较返回类型
+// 这是因为浮点数中存在一个NaN，该值与其它浮点数值无关
+std::print("{0}", ((0.0 / 0.0 <=> 1.0) == std::partial_ordering::unordered));   // 输出true
+// 当std::weak_ordering和std::　partial_ordering同时出现在基类和数据成员的类型中时，该类型的三向比较结果是std::partial_ordering
+
+// 模板函数std::common_comparison_category
+// 用于在一个类型合集中判断出最终三向比较的结果类型
+// 当类型合集中存在不支持三向比较的类型时，该函数返回void
+
+// 对基本类型的支持
+// 对两个算术类型的操作数进行一般算术转换，然后进行比较
+7 <=> 11.1  // 结果为std::partial_ordering
+
+// 对于无作用域枚举类型和整型操作数，枚举类型会转换为整型再进行比较，无作用域枚举类型无法与浮点类型比较
+enum color {
+    red
+};
+auto r = red <=> 11;   // 编译成功
+auto r = red <=> 11.1; // 编译失败
+
+// 对两个相同枚举类型的操作数比较结果，如果枚举类型不同，则无法编译
+
+// 如果一个操作数为bool类型，另一个操作数必须也是bool类型，否则无法编译，比较结果为std::strong_ordering
+
+// 不支持数组进行比较
+int arr1[5];
+int arr2[5];
+auto r = arr1 <=> arr2; // 编译失败
+// 如果一个操作数是指针，且另一个操作数是同类型的指针或可以转换为同类型的指针，如数组到指针、派生类指针到基类指针的转换，则最终比较结果为std::strong_ordering
+char *ptr = arr2;
+auto r = ptr <=> arr1;  // 编译成功
+
+// C++20
+// 自动生成的比较运算符函数
+// 如果一个自定义类型声明了三向比较运算符，则编译器自动生成< <= > >=这四种运算符函数
+// 只需再声明==运算符函数，编译器会自动生成!=运算符函数
