@@ -1746,3 +1746,51 @@ void foo() {}
 // C++17将异常规范引入类型系统，noexcept声明的函数指针无法接受没有noexcept声明的函数，反之则允许
 // 虚函数的重写也遵守这个规则，基类声明了noexcept派生类的虚函数也必须声明noexcept，否则虚函数的行为表现得不一致
 // 当基类没有声明noexcept时，派生类也可以声明noexcept
+
+// C++11
+// 类型别名
+// using identifier = typeName;
+// 别名模板
+// template<template-parameter-list>
+// using identifier = typeName;
+template<class T>
+using int_map = std::map<int, T>;
+int_map<std::string> int2string;
+int2string[11] = "7";
+
+// 尽管上述代码用typedef也可以做到
+template<class T>
+struct int_map {
+    typedef std::map<int, T> type;
+};
+int_map<std::string>::type int2string;
+int2string[11] = "7";
+
+// 如果遇上待决的类型，还需要在变量声明前加上typename关键字
+template<class T>
+struct int_map{
+    typedef std::map<int, T> type;
+};
+template<class T>
+struct X{
+    typename int_map<T>::type int2other; // 必须带有typename关键字
+};
+// 上述代码中，类模板 X 没有确定模板形参 T 的类型，因此int_map<T>::type是一个未决类型，既有可能是一个类型，也有可能是一个静态成员变量
+
+
+// C++11
+// 空指针常量 nullptr
+// nullptr是一个std::nullptr_t类型的纯右值
+// nullptr仍然可以和0比较，0和NULL仍然可以用于初始化指针变量
+assert(nullptr == 0);   // true
+// 然而，nullptr不能隐式转换为整型，只能隐式转换为指针类型
+int n1 = nullptr;   // 错误
+
+// std::nullptr_t通过decltype(nullptr)定义，且该类型的长度与void*相同
+static_assert(sizeof(std::nullptr_t) == sizeof(void *));
+// 可以用该类型创建自己的nullptr
+std::nullptr_t myNull;  // myNull是左值，因此可以对myNull取地址 &myNull
+
+// 使用nullptr可以为函数模板或者类设计一些空指针类型的特化版本，在C++11之前是无法实现的，因为NULL的推导类型是int
+
+
