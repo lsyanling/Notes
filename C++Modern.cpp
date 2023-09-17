@@ -1874,3 +1874,234 @@ auto r = ptr <=> arr1;  // 编译成功
 // 在同一个线程中，一个线程局部存储对象只会被初始化一次，即使在某个函数内被多次调用
 // 对应地也只会被销毁一次，通常发生在线程退出的时刻
 // 显然，一个线程的两个不同函数中的线程局部存储对象是无关的，即使它们具有相同的对象名
+
+
+
+// C++17
+// inline static 成员变量，编译器在该类的定义首次出现时定义和初始化内联静态成员变量
+
+
+// C++11
+// constexpr常量表达式
+// const定义的常量可能是一个运行时常量，例如函数调用，即使该函数返回的是一个常量
+
+// constexpr要求该值必须在编译期计算
+int x1 = 42;
+constexpr int x2 = x1;  // 编译失败，x2无法用x1初始化
+char buffer[x2] = {0};
+// 常量值必须用常量初始化，而 x1 并不是一个常量
+
+// constexpr函数
+// 要求该函数的返回值在编译期就计算出来
+// 该函数必须返回值，即返回类型不能是void
+// 函数体必须只有一条语句，return expr，其中expr也是一个常量表达式
+// 如果函数有形参，则将形参替换到expr中后，expr仍然必须是一个常量表达式
+// 函数在使用之前必须定义
+
+// constexpr函数支持递归，可以使用递归来完成循环的操作
+// constexpr函数调用时，如果实参不是一个常量，将退化为普通函数
+
+// constexpr构造函数
+// constexpr说明符不能用于声明自定义类型
+class X{
+    int x1;
+public:
+    X() : x1(5) {}
+    int get() const{
+        return x1;
+    }
+};
+constexpr X x;              // 编译失败，X不是字面类型
+char buffer[x.get()] = {0}; // 编译失败，x.get()无法在编译阶段计算
+
+// 解决方法是用constexpr声明自定义类型的构造函数
+// constexpr构造函数的初始化列表中必须是常量表达式，且函数体必须为空
+class X{
+    int x1;
+public:
+    constexpr X() : x1(5) {}
+    constexpr X(int i) : x1(i) {}
+    constexpr int get() const{
+        return x1;
+    }
+};
+constexpr X x;
+char buffer[x.get()] = {0};
+// 上面的代码只是给构造函数和get函数添加了constexpr说明符就可以通过编译
+// 因为它们本身都符合常量表达式构造函数和常量表达式函数的要求，这样的类被称为字面量类类型（literal class type）
+// 在C++11中，constexpr会自动给函数带上const属性，因此get()函数的const不必写出，这一点在C++14中不同
+// constexpr构造函数与constexpr函数一样，具有退化特性
+
+// 注意，constexpr声明自定义类型变量，必须确保该类型的析构函数是平凡的
+// 平凡析构函数必须满足下面的条件
+// 自定义类型中不能有用户自定义的析构函数，析构函数不能是虚函数，且基类和成员的析构函数必须都是平凡的
+
+// constexpr对浮点的支持
+// 在constexpr之前，常使用enum hack实现在编译期计算常量表达式的值，但仅限于整型
+// constexpr支持声明浮点类型的常量表达式值，且保证其精度至少和运行时的精度相同
+
+
+// C++14
+// constexpr函数的增强
+// 除static变量和thread_local变量外，constexpr函数体允许声明变量，但必须初始化
+// 函数体允许if语句，switch语句和全部的循环语句，但不允许goto语句
+// 函数可以修改生命周期和常量表达式相同的对象，例如，通过++x修改了形参x的值
+// 函数的返回类型可以是void
+// constexpr声明的成员函数不再具有const属性
+// 上述增强同样适用于constexpr构造函数
+
+
+
+// C++17
+// constexpr lambda表达式
+// lambda表达式在条件允许的情况下都会隐式声明为constexpr
+
+// C++17
+// constexpr的内联属性
+// constexpr声明静态成员变量时，该变量自动内联
+
+// C++17
+// if constexpr
+// if constexpr的条件必须是编译期常量表达式，条件结果一旦确定，编译器将只编译符合条件的代码块
+
+// 该特性只有在使用模板时才有实际意义
+if constexpr (i > 0)    // 编译失败，不是常量表达式
+{
+    std::cout << "i > 0" << std::endl;
+}
+// 将只编译选择的代码块
+template <class T>
+bool is_same_value(T a, T b){
+    if constexpr(std::is_same<T, double>::value) 
+        if (std::abs(a - b) < 0.0001)
+            return true;
+        else
+            return false;
+    else
+        return a == b;
+}
+// 然而，需要小心函数有多个不同的返回类型导致的编译失败
+template <class T>
+auto minus(T a, T b){
+    if constexpr (std::is_same<T, double>::value)
+        if (std::abs(a - b) < 0.0001)
+            return 0.;
+        else
+            return a - b;
+    // 当T为double时，函数有不同的返回类型，编译失败
+    return static_cast<int>(a - b);
+}
+
+// if constexpr不支持短路规则，应使用嵌套的if constexpr
+
+
+// C++20
+// constexpr虚函数
+// 在C++20之前，虚函数不允许声明为constexpr
+// constexpr的虚函数在继承重写上并没有特殊要求，constexpr的虚函数可以覆盖重写普通虚函数，普通虚函数也可以覆盖重写constexpr的虚函数
+
+// C++20
+// constexpr函数中出现try-catch
+constexpr int f(int x){
+    try { return x + 1; }
+    catch (...) { return 0; }
+}
+// 然而，throw语句仍然被禁止，因此该try块是不能抛出异常的，也意味着catch永远不会执行
+// 实际上，当函数被评估为常量表达式时，try-catch没有任何作用
+
+// C++20
+// 允许在constexpr中进行平凡的默认初始化
+struct X{
+    bool val;
+};
+constexpr void f(){
+    X x;    // 编译错误，未初始化
+}
+f();
+// C++20允许在constexpr中进行平凡的默认初始化，进一步减少了constexpr函数相比普通函数的特殊性
+
+// C++20
+// 允许在constexpr中更改联合类型的有效成员
+union Foo{
+    int i;
+    float f;
+};
+constexpr int use(){
+    Foo foo{};
+    foo.i = 3;
+    foo.f = 1.2f;   // C++20之前编译失败
+    return 1;
+}
+
+// C++20
+// 允许dynamic_cast和typeid出现在常量表达式中
+// 允许在constexpr函数使用未经评估的内联汇编
+
+// C++20
+// consteval
+// 立即函数像是更严格的constexpr，禁止退化到普通函数
+consteval int sqr(int n){
+    return n * n;
+}
+constexpr int r = sqr(100); // 编译成功，常量表达式上下文环境
+int x = 100;
+int r2 = sqr(x);    // 编译失败，x是变量
+// 如果一个立即函数在另一个立即函数中被调用，则函数定义时的上下文环境不必是一个常量表达式
+consteval int sqrsqr(int n){
+    return sqr(sqr(n));     // 能否编译成功取决于调用sqrsqr时的上下文环境是否是常量表达式
+}
+
+// lambda表达式也可以使用consteval说明符
+
+// C++20
+// constinit
+// constinit说明符用于具有静态存储持续时间的变量声明上，它要求变量具有常量初始化程序
+constinit int x = 11; // 编译成功，全局变量具有静态存储持续
+int main()
+{
+    constinit static int y = 42; // 编译成功，静态变量具有静态存储持续
+    constinit int z = 7;         // 编译失败，局部变量是动态分配的
+}
+const char* f() { return "hello"; }
+constexpr const char *g() { return "cpp"; }
+constinit const char *str1 = f(); // 编译错误，f()不是一个常量初始化程序
+constinit const char *str2 = g(); // 编译成功
+
+// constinit还能用于非初始化声明，以告知编译器thread_local变量已被初始化
+extern thread_local constinit int x;
+int f() { return x; }
+
+// 注意，constinit初始化的对象本身并不要求是常量
+
+// C++20
+// std::is_constant_evaluated()，该函数在<type_traits>头文件中定义
+// 该函数用于判断当前表达式是否是一个常量求值环境，如果是一个明显常量求值的表达式则返回true，否则返回false
+constexpr double power(double b, int x){
+    if (std::is_constant_evaluated() && x >= 0){
+        double r = 1.0, p = b;
+        unsigned u = (unsigned)x;
+        while (u != 0){
+            if (u & 1)
+                r *= p;
+            u /= 2;
+            p *= p;
+        }
+        return r;
+    }
+    else
+        return std::pow(b, (double)x);
+}
+int main(){
+    constexpr double kilo = power(10.0, 3); // 常量求值
+    int n = 3;
+    double mucho = power(10.0, n); // 非常量求值
+    return 0;
+}
+
+// 明显常量求值分为以下几类
+// 常量表达式，包括数组长度，case表达式，非类型模板实参，static_assert中的表达式等
+// if constexpr语句中的条件
+// constexpr变量的初始化程序
+// 立即函数调用
+// 约束概念表达式
+// 可在常量表达式中使用或者具有常量初始化的变量初始化程序
