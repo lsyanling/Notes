@@ -2105,3 +2105,79 @@ int main(){
 // 立即函数调用
 // 约束概念表达式
 // 可在常量表达式中使用或者具有常量初始化的变量初始化程序
+
+
+
+// C++17
+// 确定的表达式求值顺序
+
+// 函数表达式一定在函数参数之前求值
+foo(a, b, c);   // foo一定在a、b、c之前求值，但参数a、b、c的求值顺序仍然没有确定
+
+// 对于后缀表达式和移位运算符，总是从左往右求值
+E1[E2];
+E1.E2;
+E1.*E2;
+E1->*E2;
+E1 << E2;
+E1 >> E2;
+
+// 赋值表达式从右往左求值
+
+// new表达式的内存分配优先于T构造函数中参数E的求值
+new T(E)
+
+
+// C++11
+// 十六进制浮点表示
+// 通过std::hexfloat和std::defaultfloat修改浮点输入和输出的默认格式化
+0x1.7800p+2
+// 十六进制仅用于有效数，底数是2，指数仍然是十进制
+
+// C++17
+// 十六进制浮点字面量
+// 尽管C++11支持了输入输出时的十六进制浮点表示，直到C++17才能用十六进制浮点字面量来表示一个浮点数
+double float_array[] { 0x1.7800p+2 };
+// IEEE-754标准最小的单精度值即0x1.0p−126
+
+// C++14
+// 二进制整数字面量
+0b11001101
+
+// C++14
+// 单引号整数分隔符
+123'456
+
+// C++11
+// 原生字符串字面量
+prefix R"delimiter(raw_characters)delimiter"
+// prefix 和 delimiter 可选
+R"HTML(raw_characters)HTML"
+// prefix 用于定义不同类型的原生字符串字面量，wchar_t char16_t char32_t的 prefix 分别是 L u U
+UR"cpp(raw_characters)cpp"  // char32_t
+
+// C++20
+// char8_t 的 prefix 是 u8
+u8R"cpp(raw_characters)cpp"
+
+// 原生字符串字面量也可以连接普通字符串字面量
+
+// C++11
+// 自定义字面量
+returnType operator ""identifier(params)
+// 上述运算符重载定义了一个字面量后缀
+lengthWithCm operator ""cm(unsigned long long)
+auto length = 1cm + 2cm;
+// 标准建议字面量运算符函数的标识符以下划线开始，如_cm
+// 自定义字面量支持整数、浮点数、字符和字符串四种类型，它们接受的参数类型如下
+
+// 整数字面量运算符函数的形参有3种类型 unsigned long long、const char* 和无参
+// 整数字面量会先被转换为 unsigned long long 或 const char* 再作为参数传入
+
+// 浮点数字面量运算符函数的形参有3种类型 long double、const char* 和无参
+
+// 字符串字面量运算符函数只有一种形参类型列表(const char* str, size_t len)
+
+// 字符字面量运算符函数只有一种形参类型char
+
+// 字面量运算符函数的标识符可以是保留关键字
