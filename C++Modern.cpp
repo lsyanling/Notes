@@ -2181,3 +2181,119 @@ auto length = 1cm + 2cm;
 // 字符字面量运算符函数只有一种形参类型char
 
 // 字面量运算符函数的标识符可以是保留关键字
+
+// C++11
+// 数据对齐
+// alignof 运算符可以用于获取类型的对齐字节长度
+// alignas 说明符可以用来改变类型的默认对齐字节长度
+
+// alignof 的操作数必须是一个类型，不能是一个变量
+// 不应该使用 decltype 获取变量的类型再进行 alignof 运输，这只对默认对齐有效
+alignas(8) int a = 0;
+auto x3 = alignof(decltype(a)); // 错误地返回4，而并非设置的8
+
+// alignas 可以接受类型或者常量表达式，且常量表达式计算的结果必须是2的幂
+alignas(16) char a1;
+alignas(double) int a2;
+struct alignas(4) X // alignas 将被忽略
+{
+    alignas(8) char a1;
+    alignas(double) int a2;
+    double a3;
+};
+
+// std::alignment_of 可以获取类型的对齐字节长度
+std::alignment_of<int>::value;
+// std::aligned_storage 可以分配一块指定对齐字节长度和大小的内存
+std::aligned_storage<128, 16>::type buffer;
+// std::aligned_union 接受一个std::size_t作为分配内存的大小，以及不定数量的类型，以这些类型中对齐字节数最大作为分配内存的对齐字节长度
+std::aligned_union<128, double, int, char>::type buffer;
+// std::align 接受一个指定大小的缓冲区指针和一个对齐字节长度，返回一个该缓冲区中最近的能找到符合指定对齐字节长度的指针
+// 通常，传入的缓冲区内存大小为预分配的缓冲区大小加上预指定对齐字节长度的字节数
+std::align(align_size, alloc_size, dest_ori_ptr, dest_size);
+
+// C++17
+// new分配指定对齐字节长度的对象
+void* operator new(std::size_t, std::align_val_t);
+void* operator new[](std::size_t, std::align_val_t);
+union alignas(256) X{
+    int a;
+};
+X *x = new X(); // 分配的地址256字节对齐
+
+// C++11
+// 属性说明符
+// 用双方括号描述属性语法
+[[attr]] [[attr1, attr2, attr3(args)]]
+// 属性支持命名空间
+[[namespace::attr(args)]]
+
+// 属性说明符总是声明它前面的对象，在整个声明之前的属性则声明语句种所有声明的对象
+[[attr1]] 
+class [[attr2]] X{ 
+    int i; 
+} a, b[[attr3]];
+// attr1声明了对象a和b，attr2声明了类型X，attr3声明了对象b
+
+// C++17
+// using 打开属性命名空间
+[[using namespace : attr1, attr2, attr3]]
+// C++17
+// 编译器将忽略无法识别的属性
+
+// C++11
+// noreturn 属性，用于声明函数不会返回
+// 与返回类型为void不同，noreturn 认为函数不会返回到其调用者
+
+// C++11
+// carries_dependency 属性，见书31.5.2
+
+// C++14
+// deprecated 属性，用于声明实体被弃用
+[[deprecated]]
+void foo() {}
+class [[deprecated]] X {};
+// deprecated 可以接受一个字符串参数，用于指示弃用的原因或提示用户使用新的函数
+[[deprecated("foo was deprecated, use bar instead")]] void foo() {}
+
+// C++17
+// fallthrough 属性，用于在switch语句中提示编译器直落行为是有意的，必须出现在case或default标签之前
+switch(a){
+    case 1:
+    bar();
+    [[fallthrough]];
+    case 2:
+}
+
+// C++17
+// nodiscard 属性，声明函数的返回值不应该被丢弃
+// 可以对函数声明，也可以声明在类或枚举类型上，当该类或枚举类型被作为返回类型时生效
+
+// C++20
+// nodiscard 支持将字符串字面量作为参数，包含在警告中
+// nodiscard 可以用于构造函数，在构建临时对象时发出警告
+
+// C++17
+// maybe_unused 属性，声明实体可能不会被应用
+
+// C++20
+// likely 和 unlikely 属性，声明在标签或语句上
+// likely 允许编译器对该属性所在的执行路径相对于其它执行路径进行优化，unlikely 相反
+// 通常被声明在switch语句
+switch(i) {
+    case 1: return 1;
+    [[unlikely]] case 2: return 2;
+}
+
+// C++20
+// no_unique_address 属性，声明在非静态数据成员上且不为位域，指示编译器该数据成员不需要唯一的地址，即不需要与其他非静态数据成员使用不同的地址
+struct Empty {};
+struct X{
+    int i;
+    [[no_unique_address]] Empty e;  // e将与i有相同的地址
+};
+// 如果两个相同类型的成员都具有no_unique_address属性，那么编译器不会重复地将其堆在同一地址
+struct X{
+    int i;
+    [[no_unique_address]] Empty e, e1;  // e和e1的地址不同
+};
