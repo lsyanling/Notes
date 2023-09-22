@@ -2297,3 +2297,29 @@ struct X{
     int i;
     [[no_unique_address]] Empty e, e1;  // e和e1的地址不同
 };
+
+
+
+// C++17
+// 预处理器 __has_include 用于判断某个头文件是否能够被包含
+#if __has_include(<optional>)
+
+// C++20
+// 特性测试宏
+// 属性测试宏 __has_cpp_attribute 指示编译环境是否支持某种属性，标准属性将被展开为该属性进入标准的时间
+std::cout << __has_cpp_attribute(deprecated);   // 201309
+// 语言功能特性测试宏，每个宏将被展开为该特性进入标准的时间
+// 标准库功能特性测试宏，通常包含在 <version> 或功能特性所在的头文件中
+
+// C++11
+// 可变参数宏 __VA_ARGS__ 该宏与C99一致，常用于打印日志
+#define LOG(msg, ...) printf("[" __FILE__ ":%d] " msg, __LINE__, __VA_ARGS__)
+LOG("Hello %d", 2020);
+// 但是，必须接受至少两个参数，否则宏展开的末尾将多出一个逗号
+LOG("Hello %d");    // 展开如下
+printf("[" __FILE__ ":%d] " "Hello 2020", __LINE__, );
+
+// C++20
+// 因此引入了新的宏 __VA_OPT__ 用于表明可选，可以在可变参数为空的情况下使用
+#define LOG(msg, …) printf("[" __FILE__ ":%d] " msg, __LINE__ __VA_OPT__(, ) __VA_ARGS__)   // 逗号是可选的
+
