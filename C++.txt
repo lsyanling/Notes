@@ -620,7 +620,7 @@ void Swap(AnyType &a, AnyType &b)
     b = temp;
 }
 第一行表明要建立一个模板，并将类型命名为AnyType
-这里关键字template和typename是必须的，除非可以使用class代替template，另外，必须使用尖括号
+这里关键字template和typename是必须的，除非可以使用class代替typename，另外，必须使用尖括号
 类型名可以任意选择
 余下的代码描述了交换两个AnyType值的算法
 模板不创建函数，只是告诉编译器如何定义函数
