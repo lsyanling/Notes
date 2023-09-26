@@ -2323,3 +2323,314 @@ printf("[" __FILE__ ":%d] " "Hello 2020", __LINE__, );
 // 因此引入了新的宏 __VA_OPT__ 用于表明可选，可以在可变参数为空的情况下使用
 #define LOG(msg, …) printf("[" __FILE__ ":%d] " msg, __LINE__ __VA_OPT__(, ) __VA_ARGS__)   // 逗号是可选的
 
+// 线程库协程库牵连较广，协程库支持还不完善，语法还需要补模板，下面是补课
+
+// C++名字查找
+// 出现在::右边的名字是限定名，代表类成员、命名空间的成员、枚举项
+// 如果::左边为空，则只在全局命名空间作用域（或通过using声明引入全局命名空间）中查找，这使得被局部声明隐藏的名字也能被访问
+{
+    struct std {};
+    std::cout << "失败\n";  // 错误，无限定查找找到结构体
+    ::std::cout << "成功\n";
+}
+// 只有完成了对::左边名字的查找，才能对右边的名字进行查找
+
+// 未出现在::右边的名字是无限定名，对它的名字查找依次检查各个作用域，找到一个声明即停止查找：
+// 如果在全局作用域且不在函数、类或任何声明的命名空间中，查找全局作用域中这次名字使用之前的部分
+// 如果在声明的命名空间中且不在函数或类中，查找该命名空间中这次名字使用之前的部分，然后查找外围命名空间在声明该命名空间之前的部分，直到抵达全局命名空间
+// 查找非成员函数、类的定义的过程类似
+
+// 实参依赖查找
+// 对于函数调用表达式，除了在上述无限定名字查找以外，还会在它的各实参的命名空间中查找这些函数
+std::cout << endl;  // 错误，这是对 operator<< 的调用，不是对 endl 的调用
+endl(std::cout);    // 在 std::cout 的命名空间 std 中查找 endl
+(endl)(std::cout);  // 错误，子表达式 (endl) 不是函数调用表达式，endl未在此命名空间声明
+
+// C++模板
+// 类型推导不适用于默认参数
+template<typename T>
+void f(T = "");
+f(1);   // T被推断为int，调用f<int>(1)
+f();    // 无法推断T的类型
+// 除非给模板类型参数也声明默认参数
+template <typename T = std::string>
+void f(T = "");
+f();
+
+// 类型萃取
+// std::decay<> 返回退化的类型，定义在<type_trait>中
+// 公共类型
+// std::common_type_t<T1, T2>，返回的结果也是退化的，定义在<type_trait>中
+// C++17
+// 使用std::is_same_v代替std::is_same::value
+template<typename T, typename U>
+std::is_same_v<decltype(T), decltype(U)>;
+
+// C++17
+// 类模板参数推导，如果类的构造函数可以推断出所有模板参数的类型，就不需要显式指明模板参数
+vector<int> v(1, 1);
+vector v(1, 1);
+
+// 类模板的成员函数只有在被调用时才会实例化
+// 然而，对于友元函数，如果在类内定义，同上，如果在类内声明而在类外定义，会变得很复杂
+// 可以在模板类内声明一个新的函数模板
+template<typename T>
+struct Value {
+	T value;
+	Value(T v) :value(v) {}
+    template<typename U>
+	friend ostream& operator<<(ostream& os, Value<U>& v);
+};
+template<typename T>
+ostream& operator<<(ostream& os, Value<T>& v) {
+    return os << v.value;
+}
+// 或者先声明函数模板，这要求前置类模板的声明
+template<typename T>
+struct Value;
+template<typename T>
+ostream& operator<<(ostream& os, Value<T>& v) {
+	return os << v.value;
+}
+template<typename T>
+struct Value {
+	T value;
+	Value(T v) :value(v) {}
+	friend ostream& operator<< <T>(ostream& os, Value& v);
+};
+
+// 类模板特化
+template<>
+struct Value<double> {
+	double value;
+	Value(double v) :value(v) {}
+	friend ostream& operator<< <double>(ostream& os, Value& v);
+};
+// 偏特化
+template<typename T>
+struct Value<T*> {
+	T* value;
+	Value(T* v) :value(v) {}
+	friend ostream& operator<<<T*>(ostream& os, Value& v);
+};
+// 多模板参数类模板偏特化
+template<typename T1, typename T2>
+ostream& operator<<(ostream& os, Value<T1, T2>& v) {
+	return os << v.value1 << v.value2;
+}
+template<typename T1, typename T2>
+struct Value {
+	T1 value1;
+	T2 value2;
+	Value(T1 v1, T2 v2) :value1(v1), value2(v2) {}
+	friend ostream& operator<<<T1, T2>(ostream& os, Value& v);
+};
+// 模板参数相同
+template<typename T>
+struct Value<T, T> {
+	T value1;
+	T value2;
+	Value(T v1, T v2) :value1(v1), value2(v2) {}
+	friend ostream& operator<<<T, T>(ostream& os, Value& v);
+};
+// 模板参数为指针
+template<typename T1, typename T2>
+struct Value<T1*, T2*> {
+	T1* value1;
+	T2* value2;
+	Value(T1* v1, T2* v2) :value1(v1), value2(v2) {}
+	friend ostream& operator<<<T1*, T2*>(ostream& os, Value& v);
+};
+// 部分模板参数确定
+template<typename T>
+struct Value<T, int> {
+	T value1;
+	int value2;
+	Value(T v1, int v2) :value1(v1), value2(v2) {}
+	friend ostream& operator<<<T, int>(ostream& os, Value& v);
+};
+
+// 默认类模板参数
+template<typename T1, typename T2 = char>
+struct Value {
+	T1 value1;
+	T2 value2;
+	Value(T1 v1) :value1(v1) {}
+	Value(T1 v1, T2 v2) :value1(v1), value2(v2) {}
+	friend ostream& operator<<<T1, T2>(ostream& os, Value& v);
+};
+
+// C++11
+// 模板别名
+template<typename T>
+using HomogeneousValue = Value<T, T>;
+typename HomogeneousValue<int> h;
+
+// 类模板成员类型别名
+template<typename T>
+struct Value<T, T> {
+	T value1;
+	T value2;
+	using Type = T;
+	Value(T v1, T v2) :value1(v1), value2(v2) {}
+	friend ostream& operator<<<T, T>(ostream& os, Value& v);
+};
+template<typename T>
+void func() {
+	typename Value<T, T>::Type v;   // 使用从属类型需要以typename为前缀
+}
+// 省略typename前缀
+template<typename T>
+using Value_Type_t = typename Value<T, T>::Type;
+template<typename T>
+void func() {
+	Value_Type_t v;
+}
+
+// 推断指南，必须出现在和模板类的定义相同的作用域或命名空间内，通常紧跟着模板类的定义
+Value(int, char)->Value<long, int>;
+
+// 聚合类的模板化
+template<typename T>
+struct ValueWithComment{
+    T value;
+    std::string comment;
+}
+// C++17
+// 聚合类模板的推断指南
+ValueWithComment(const char*, const char*)->ValueWithComment<std::string>;
+
+// 非类型模板参数
+// 非类型模板参数只能是整型常量，包含枚举在内，指向对象、函数、成员的指针，对象或函数的左值引用，或者是std::nullptr_t
+// 不能是浮点数或对象，当作为对象的指针时，对象不能是字符串常量、临时变量或数据成员以及其它子对象
+// 如果非类型模板参数中出现了operator>，必须将对应表达式放到圆括号里面
+template<int T, bool B>
+struct C {};
+C<42, (sizeof(int) > 4)> c;
+
+// C++17
+// auto、decltype(auto)作为非类型模板参数的类型
+template<auto Val, typename T = decltype(Val)>
+T foo() { return Val; }
+
+// C++11
+// 变参模板TODO
+
+
+// C++20
+// concept requires 概念和约束
+// 概念
+// template<...>
+// concept conceptName [[attributes]] = requiresExpression;
+template<typename T, typename U>
+concept Derived = std::is_base_of<U, T>::value;
+template<typename T>
+concept Hashable = requires(T a) {
+    { std::hash<T>{}(a) } -> std::convertible_to<std::size_t>;
+};
+// 概念不能递归地提及自身，不能受约束，即不能出现在requires子句中
+// 概念不能被显式实例化、显式特化或部分特化
+// 约束
+template<Hashable T>
+void f(T);
+template<typename T>
+    requires Hashable
+void f(T);
+template<typename T>
+void f(T) requires Hashable;
+// 约束分为合取&&，析取||，不可分割约束，合取和析取短路求值
+// TODO
+
+
+
+// C++11
+// thread
+// thread，join，detach，joinable，this_thread，get_id，native_handle，swap，yield，sleep_for，sleep_until
+// mutex
+// mutex，lock，unlock，recursive_mutex，time_mutex，recursive_time_mutex，try_lock_for，try_lock_until
+// lock_guard，try_lock，unique_lock，adopt_lock，try_to_lock，defer_lock，release
+// conditional_variable
+// conditional_variable，wait，notify_one，notify_all，call_once
+// future
+// future，promise，get_future，get，packaged_task，packaged_task::valid，packaged_task::reset，async，launch::async，launch::deferred
+
+// C++20
+// jthread，自动join的线程
+
+// 线程函数传入引用参数，实际上是新线程堆栈中一个复制的临时值的引用，应使用std::ref()
+
+// C++20
+// 协程
+// 协程是一种可以被挂起和恢复的函数，它提供了一种创建异步代码的方法
+// co_await，co_return，co_yield，具有这三个关键字中任何一个的函数就是协程
+
+// 通常，协程和future、generator一起使用
+std::future<int> foo()
+{
+    std::cout << "call foo\n";
+    std::this_thread::sleep_for(3s);
+    co_return 5;
+}
+std::future<std::future<int>> bar()
+{
+    std::cout << "call bar\n";
+    std::cout << "before foo\n";
+    auto n = co_await std::async(foo); // 挂起点
+    std::cout << "after foo\n";
+    co_return n;
+}
+int main()
+{
+    std::cout << "before bar\n";
+    auto i = bar();
+    std::cout << "after bar\n";
+    i.wait();   // 等待异步调用
+    std::cout << "result = " << i.get().get();
+}
+// 输出
+// before bar
+// call bar
+// before foo
+// after bar
+// call foo
+// after foo
+// result = 5
+
+std::experimental::generator<int> foo()
+{
+    std::cout << "begin" << std::endl;
+    for (int i = 0; i < 5; i++)
+    {
+        co_yield i;
+    }
+    std::cout << "end" << std::endl;
+}
+int main()
+{
+    for (auto i : foo())
+    {
+        std::cout << i << std::endl;
+    }
+}
+// 输出
+// begin
+// 0
+// 1
+// 2
+// 3
+// 4
+// end
+
+// co_await运算符原理
+auto n = co_await std::async(foo);
+// 相当于
+std::future<std::future<int>> expr = std::async(foo);
+auto n = co_await expr;
+// 其中expr称为可等待对象，即该对象可以被等待
+// 可等待对象需要实现三个成员函数，await_resume，await_ready和await_suspend
+// 具备这三个函数的对象同时又被称为等待器
+// await_ready用于判断可等待对象是否已经准备好返回
+// await_suspend用于调度协程的执行流程，包括异步等待结果、恢复协程、返回控制权给主调函数
+// await_resume用于接收异步执行结果
+
+// co_await运算符的重载
