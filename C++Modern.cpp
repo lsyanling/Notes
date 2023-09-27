@@ -634,7 +634,7 @@ int main() {
 }
 // 函数f不再有返回值，它通过throw抛出x，main函数用try-catch捕获f抛出的x，这个捕获调用的就是移动构造函数
 
-
+// C++17
 // 复制消除
 // 在以下情况，对象将直接构造到它们本来要复制/移动到的存储中
 // 即使复制/移动构造函数和析构函数拥有可观察的副作用
@@ -2479,7 +2479,7 @@ template<typename T>
 void func() {
 	typename Value<T, T>::Type v;   // 使用从属类型需要以typename为前缀
 }
-// 省略typename前缀
+// 利用using声明省略typename前缀
 template<typename T>
 using Value_Type_t = typename Value<T, T>::Type;
 template<typename T>
@@ -2514,13 +2514,186 @@ template<auto Val, typename T = decltype(Val)>
 T foo() { return Val; }
 
 // C++11
-// 变参模板TODO
+// 可变参数模板
+void print() {}
+template<typename T, typename ...Types>
+void print(T firstArg, Types ...args) {
+	cout << firstArg << '\n';
+	print(args...);
+}
+int main(int argc, char* argv[]) {
+	print(1, 2, 3.3, 'a', "aff");
+}
+// 注意，参数为空的非模板重载函数需要放在函数模板的前面，函数模板在递归时才能找到合适的重载
 
+// 在类模板中，模板形参包必须是最后一个形参
+// 在函数模板中，不要求模板形参包出现在最后，只要保证后面的形参类型能够通过实参推导或具有默认参数
+template<typename... Args, typename T, typename U = double>
+void foo(T, U, Args ...args) {}
+foo(1, 2, 11.7);    // 编译成功
+
+// 非类型模板形参也可以作为形参包
+template<int ...Args>
+void foo(){};
+
+// 形参包展开
+// 例1
+template <class T, class U>
+T baz(T t, U u){
+    std::cout << t << ":" << u << std::endl;
+    return t;
+}
+template <class ..Args>
+void foo(Args ...args) {}
+template <class ...Args>
+class bar{
+public:
+    bar(Args ...args)    {
+        foo(baz(&args, args)...); // 展开模式为baz(&args, args)
+        // 相当于foo(baz(&a1, a1), baz(&a2, a2), baz(&a3, a3));
+    }
+};
+int main(){
+    bar<int, double, unsigned int> b(1, 5.0, 8);
+}
+// 例2
+template <class ..Args>
+int baz(T ...t){
+    return 0;
+}
+template <class …Args>
+void foo(Args ...args) {}
+template <class ...Args>
+class bar{
+public:
+    bar(Args ...args)    {
+        foo(
+            baz(&args...) // 展开模式为&args...
+            // 相当于baz(&a1, &a2, &a3)
+            + args... // 展开模式为baz(&a1, &a2, &a3) + args...
+            // 相当于foo(baz(&a1, &a2, &a3) + a1, baz(&a1, &a2, &a3) + a2, baz(&a1, &a2, &a3) + a3)
+        );
+    }
+};
+int main(){
+    bar<int, double, unsigned int> b(1, 5.0, 8);
+}
+// 例3
+int add(int a, int b) { return a + b; };
+int sub(int a, int b) { return a - b; };
+template <class ...Args>
+void foo(Args (*...args)(int, int)){
+    int tmp[] = {(std::cout << args(7, 11) << std::endl, 0)...};
+    // 相当于int tmp[] = {(std::cout << add(7, 11) << std::endl, 0),(std::cout << sub(7, 11) << std::endl, 0)};
+}
+int main(){
+    foo(add, sub);
+}
+
+// 在类的继承中展开形参包
+template<class ...Args>
+struct derived : public Args... // 多个基类
+{
+    derived(const Args& ...args) : Args(args)... // 调用基类构造函数
+    {}
+};
+struct base1 {
+	base1() = default;
+	base1(const base1&) {
+		std::cout << "copy ctor base1" << std::endl;
+	}
+};
+struct base2 {
+	base2() = default;
+	base2(const base2&) {
+		std::cout << "copy ctor base2" << std::endl;
+	}
+};
+int main() {
+	base1 b1;
+	base2 b2;
+	derived d(b1, b2);
+}
+
+// 模板形参包中含有模板形参包
+template<template<class ...> class ...Args> // 只有...Args才是模板形参包，里面的...只是说明模板形参是一个变参模板，它不能在bar中被展开，也没有名称
+class bar : public Args<int, double>... {
+public:
+	bar(const Args<int, double>& ...args) : Args<int, double>(args) ... {}
+};
+template<class ...Args>
+class baz1 {};
+template<class ...Args>
+class baz2 {};
+int main() {
+	baz1<int, double> a1;
+	baz2<int, double> a2;
+	bar<baz1, baz2> b(a1, a2);
+}
+
+// 两个形参包可以存在于同一个模式中，这要求两个形参包展开后的长度相同
+template<class...>
+struct Tuple {};
+template<class T1, class T2>
+struct Pair {};
+template<class ...Args1>
+struct zip {
+	template<class ...Args2>
+	struct with {
+		typedef Tuple<Pair<Args1, Args2>...> type;
+	};
+};
+int main() {
+	zip<short, int>::with<unsigned short, unsigned>::type t1;  // 编译成功
+	zip<short>::with<unsigned short, unsigned>::type t2;       // 编译失败，形参包长度不同
+}
+
+// lambda表达式捕获列表中的形参包展开
+template <class F, class... Args>
+auto delay_invoke(F f, Args... args){
+    return [f, args...]() -> decltype(auto)
+    {
+        return std::invoke(f, args...);
+    };
+}
+
+// 在函数重载时，定参函数模板优于变参函数模板，部分定参也优于变参模板
+
+// C++11
+// sizeof...运算符
+// 返回模板形参包中参数的个数，类型是std::size_t
+template<typename T, typename ...Types>
+void print(T firstArg, Types ...args) {
+	cout << firstArg << '\n';
+    sizeof...(Types);
+    sizeof...(args);
+	print(args...);
+}
+
+// C++17
+// 折叠表达式
+// 在C++17之前，通常需要对可变参数模板进行递归计算，还需要考虑递归中止的问题
+// C++17扩展了形参包展开方法
+template<class... Args>
+auto sum(Args ...args){
+	return (args + ...);    // arg0 + (arg1 + arg2)
+}
+sum(1, 5.0, 11.7);
+// C++17有4种折叠规则
+// 一元向左折叠
+// (... op args) 折叠为 ((((arg0 op arg1) op arg2) op ...) op argN)
+// 一元向右折叠
+// (args op ...) 折叠为 (arg0 op (arg1 op ... (argN-1 op argN)))
+// 二元向左折叠
+// (init op ... op args)折叠为(((((init op arg0) op arg1) op arg2) op ...) op argN)
+// 二元向右折叠
+// (args op ... op init)折叠为(arg0 op (arg1 op ...(argN-1 op (argN op init)))
+// init表示初始值，二元运算中，两个运算符必须相同
 
 // C++20
 // concept requires 概念和约束
 // 概念
-// template<...>
+// template<auto ...Args>
 // concept conceptName [[attributes]] = requiresExpression;
 template<typename T, typename U>
 concept Derived = std::is_base_of<U, T>::value;
@@ -2633,4 +2806,222 @@ auto n = co_await expr;
 // await_suspend用于调度协程的执行流程，包括异步等待结果、恢复协程、返回控制权给主调函数
 // await_resume用于接收异步执行结果
 
-// co_await运算符的重载
+// co_await运算符的重载 TODO
+
+
+
+// C++11
+// 显式自定义类型转换运算符
+// 对于到bool的转换，允许一些隐式转换的例外，即使类型转换运算符被声明为explicit，这些例外包括
+// if、while、for的控制表达式，!、&&、||的操作数，条件运算符的首个操作数，static_assert声明中的bool常量表达式，noexcept说明符中的表达式
+
+// C++17
+// std::launder()
+// 洗内存，阻止编译器追踪到数据的来源以阻止编译器对数据的优化
+struct X { const int n; };
+union U { X x; float f; };
+U u = {{1}};
+X* p = new (&u.x) X{2}; // replace new修改常量区域
+// u.x.n未定义，但是可以使用std::launder
+*std::launder(&u.x.n) == 2  // true
+
+// C++11
+// 复制消除
+// RVO返回值优化，通常用于临时对象
+// NRVO具名返回值优化，通常用于具名对象
+// C++11要求复制函数和移动函数存在并可访问，C++14明确对于常量表达式和常量初始化而言，保证RVO但禁止NRVO，C++17则要求在传递临时对象或返回临时对象时直接将对象构造到目标位置，且不要求复制函数或移动函数存在或可访问，即使复制函数和移动函数存在副作用
+// C++17的优化使得所有类型都能使用工厂函数，即使该类型没有复制函数或移动函数
+
+// C++20
+// 按值默认比较
+// 在C++20之前，类的默认比较规则要求类C有一个参数为const C&的非静态成员函数，或者有两个参数为const C&的友元函数
+// C++20允许类的默认比较运算符可以是一个参数为const C&的非静态成员函数，或是两个参数为const C&或C的友元函数，允许按值默认比较
+struct C {
+    friend bool operator==(C, C) = default;
+};
+// 但是仍然禁止一个值与一个引用进行默认比较
+struct A {
+    friend bool operator==(A, const A&) = default;  // 禁止
+};
+struct B {
+    bool operator==(B) const = default; // 禁止
+};
+
+// C++20
+// new表达式推导数组长度
+int *x = new int[]{1, 2, 3};    // 在C++20之前不支持
+
+// C++20
+// 允许数组转换为未知范围的数组
+void f(int (&)[]) {}
+int arr[1];
+int main(){
+    f(arr);
+    int(&r)[] = arr;
+}
+
+// C++20
+// 在delete运算符中析构对象
+// 通常delete一个对象，先调用析构函数，再调用delete回收内存
+struct X{
+    X() {}
+    ~X(){
+        std::cout << "call dtor" << std::endl;
+    }
+    void *operator new(size_t s){
+        return ::operator new(s);
+    }
+    void operator delete(void *ptr){
+        std::cout << "call delete" << std::endl;
+        ::operator delete(ptr);
+    }
+};
+X *x = new X;
+delete x;   // 先输出 call dtor 后输出 call delete
+
+// C++20起，可以通过重载delete运算符在delete中析构函数
+struct X
+{
+    X() {}
+    ~X(){
+        std::cout << "call dtor" << std::endl;
+    }
+    void *operator new(size_t s){
+        return ::operator new(s);
+    }
+    void operator delete(X *ptr, std::destroying_delete_t){
+        ptr->~X();
+        std::cout << "call delete" << std::endl;
+        ::operator delete(ptr);
+    }
+};
+// 注意，delete运算符增加了一个 std::destroying_delete_t 类型的形参用于提示编译器，该形参不会被用到
+
+// C++20
+// 调用伪析构函数结束对象声明周期
+// 伪析构函数
+typedef int t;
+t a;
+a.~t(); // 允许进行伪析构函数调用，从而不必了解类型是否具有析构函数
+// 这是唯一使得 operator. 的左操作数是非类类型的情况
+// 从而使得所有标量类型都是 concept 可析构 的，只有引用和数组类型不满足
+// 在C++20之前，伪析构函数的调用会被当做无效的语句
+// C++20要求，伪析构函数的调用也能够结束对象的生命周期，即使对象是一个平凡类型，从而保持了行为的一致性
+
+// C++20
+// const和默认复制构造函数不匹配允许编译
+// 对于一个复制构造函数没有使用const的类
+struct MyType{
+    MyType() = default;
+    MyType(MyType &){};
+};
+// 以及一个模板类
+template <typename T>
+struct Wrapper{
+    Wrapper() = default;
+    Wrapper(const Wrapper &) = default;
+    T t;
+};
+// 当它们被组合时
+Wrapper<MyType> var1;    // 在C++20之前编译错误，复制构造函数不匹配
+// 然而，实际上并未尝试进行复制，因此C++20允许进行编译
+// 当然，仍然不允许实际的复制
+Wrapper<MyType> var2(var1); // 错误
+
+// C++20
+// volatile的调整
+// volatile不能保证数据的同步，不能保证内存操作不被中断，也不能代替原子操作
+// 因此C++20弃用了以下情况volatile的使用
+// 算术类型的前后缀++、--运算符
+volatile int d = 5;
+d++;
+--d;
+// 非类类型左操作数的赋值
+volatile int d = 5;
+d += 2;
+d *= 3;
+// 函数形参和返回类型
+volatile int f() { return 1; }
+int g(volatile int v) { return v; }
+// 结构化绑定
+struct X{
+    int a;
+    short b;
+};
+X x{11, 7};
+volatile auto [a, b] = x;
+
+// C++20
+// 逗号运算符的调整
+// 弃用了在下标表达式中使用逗号运算符
+
+// C++23
+// 多维数组
+// 支持在operator[]的重载中传入多个参数
+template <class T, size_t R, size_t C>
+struct matrix{
+    T &operator[](const size_t r, const size_t c) noexcept    {
+        return data_[r * C + c];
+    }
+    const T &operator[](const size_t r, const size_t c) const noexcept    {
+        return data_[r * C + c];
+    }
+    std::array<T, R * C> data_;
+};
+matrix<int, 2, 2> m;
+m[0, 0] = 0;
+
+// C++20
+// module 模块
+// helloworld.ixx
+export module helloworld;
+import std.core;
+export void hello(){
+    std::cout << "Hello world!\n";
+}
+// modules_test.cpp
+import helloworld;
+int main()
+{
+    hello();
+}
+// helloworld.ixx是接口模块，将编译成一个导出模块helloworld和模块元数据helloworld.ifc
+
+// C++23
+// auto(x) auto{x} decay copy auto退化复制
+// 有时候，如果要创建一个副本，不得不声明一个新的变量
+void bar(const auto &);
+void foo(const auto &param){
+    auto copy = param;
+    bar(copy);
+}
+// 现在可以使用auto(x)或者auto{x}进行退化复制
+void foo(const auto &param){
+    bar(auto{param});
+}
+
+// C++23
+import std;
+import std.compat;  // 包含所有标准库函数和C函数
+
+// C++23
+// Narrowing contextual conversions to bool
+// 在下列情况下，允许int到bool的隐式转换
+//  | Before | After |
+//  | ----------------------------------------- | --------------------------------- |
+    | if constexpr(bool(flags & Flags::Exec))   | if constexpr(flags & Flags::Exec) |
+    | if constexpr(flags & Flags::Exec != 0)    | if constexpr(flags & Flags::Exec) |
+    | static_assert(N % 4 != 0);                | static_assert(N % 4);             |
+    | static_assert(bool(N));                   | static_assert(N);                 |
+
+
+// C23 C++23
+// #elifdef #elifndef
+// C23中加入了这两个预处理指令，为了兼容C，C++23也将它们加入了
+// #ifdef 和 #ifndef 分别是 #if defined() 和 #if !defined() 的简写，而C23和C++23之前 #elif defined() 和 #elif !defined() 却并没有与之对应的简写指令
+
+// C23 C++23
+// #warning
+#ifndef FOO
+#warning "FOO defined, performance might be limited"
+#endif
