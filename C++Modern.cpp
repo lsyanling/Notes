@@ -2370,6 +2370,97 @@ std::is_same_v<decltype(T), decltype(U)>;
 // 类模板参数推导，如果类的构造函数可以推断出所有模板参数的类型，就不需要显式指明模板参数
 vector<int> v(1, 1);
 vector v(1, 1);
+// 但是，仍然不支持类模板的部分参数推导
+template <class T1, class T2>
+struct foo{
+    foo(T1, T2) {}
+};
+int main()
+{
+    foo v1(5, 6.8);              // 编译成功
+    foo<> v2(5, 6.8);            // 编译错误
+    foo<int> v3(5, 6.8);         // 编译错误
+    foo<int, double> v4(5, 6.8); // 编译成功
+}
+
+// 可以利用类模板参数推导保存lambda表达式
+template <class T>
+struct LambdaWarp{
+    LambdaWarp(T t) : func(t) {}
+    template <class ...Args>
+    void operator()(Args&&... arg){
+        func(std::forward<Args>(arg)...);
+    }
+    T func;
+};
+int main(){
+    auto l = [](int a, int b){
+        std::cout << a + b << std::endl;
+    };
+    LambdaWarp<decltype(l)> x1(l);  // 通过decltype指明lambda表达式的类型
+
+    LambdaWarp x2(  // 不必指明lambda表达式的类型
+        [](int a, int b){ std::cout << a + b << std::endl; }
+    );
+    x2(11, 7);
+}
+
+// C++20
+// 别名模板的类模板实参推导
+template<class T, class U>
+struct C{
+    C(T, U) {}
+};
+template<class V>
+using A = C<V*, V*>;
+int i{};
+A a1(&i, &i); // 推导为A<int>
+
+// C++20
+// 复制初始化优先
+// 类模板的参数推导引发了下面的问题
+std::vector v1{1, 3, 5};
+std::vector v2{v1}; // v2的类型是std::vector<int>还是std::vector<std::vector<int>>
+// 当且仅当初始化列表中只有一个与目标类模板相同的元素时，触发复制初始化
+// 即v2的类型是std::vector<int>
+
+// C++20
+// 聚合类型的类模板实参推导
+template <class T>
+struct S{
+    T x;
+    T y;
+}
+S s1{1, 2};  // 编译成功 S<int>
+S s2{1, 2u}; // 编译失败
+// 嵌套聚合类型
+template <class T, class U>
+struct X{
+    S<T> s;
+    U u;
+    T t;
+};
+X x{{1, 2}, 3u, 4}; // T实际上是由最后一个元素4推导出来的
+// 如果显式指定嵌套聚合类型模板，可以省略花括号
+template <class T, class U>
+struct X{
+    S<int> s;
+    U u;
+    T t;
+};
+X x{1, 2, 3u, 4};
+// 聚合类型中的数组推导
+template <class T, std::size_t N>
+struct A{
+    T array[N];
+};
+A a{{1, 2, 3}}; // 推导数组长度
+// 同样，如果显式指定数组长度，可以省略花括号
+template <typename T>
+struct B{
+    T array[2];
+};
+B b = {0, 1};
 
 // 类模板的成员函数只有在被调用时才会实例化
 // 然而，对于友元函数，如果在类内定义，同上，如果在类内声明而在类外定义，会变得很复杂
@@ -2487,7 +2578,7 @@ void func() {
 	Value_Type_t v;
 }
 
-// 推断指南，必须出现在和模板类的定义相同的作用域或命名空间内，通常紧跟着模板类的定义
+// 自定义推导指引，必须出现在和模板类的定义相同的作用域或命名空间内，通常紧跟着模板类的定义
 Value(int, char)->Value<long, int>;
 
 // 聚合类的模板化
@@ -2497,8 +2588,20 @@ struct ValueWithComment{
     std::string comment;
 }
 // C++17
-// 聚合类模板的推断指南
+// 聚合类模板的推导指引
 ValueWithComment(const char*, const char*)->ValueWithComment<std::string>;
+
+// 模板推导指引
+template <typename _T1, typename _T2>
+pair(_T1, _T2) -> pair<_T1, _T2>; // 按照pair(_T1, _T2)的形式推导，数组退化成指针
+// 甚至可以如下推导
+namespace std{
+    template <class... T>
+    vector(T&&... t)->vector<std::common_type_t<T...>>; // 公共类型
+}
+std::vector v{1, 5u, 3.0};
+
+// 推导指引也支持explicit说明符，从而要求对象必须显式构造
 
 // 非类型模板参数
 // 非类型模板参数只能是整型常量，包含枚举在内，指向对象、函数、成员的指针，对象或函数的左值引用，或者是std::nullptr_t
@@ -2690,6 +2793,138 @@ sum(1, 5.0, 11.7);
 // (args op ... op init)折叠为(arg0 op (arg1 op ...(argN-1 op (argN op init)))
 // init表示初始值，二元运算中，两个运算符必须相同
 
+// 一元折叠表达式的空参数包
+// 只有&& || ,三种运算符能够在空参数包的一元折叠表达式中使用
+// &&的求值结果为true，||的求值结果为false，,的求值结果是void()
+template <typename ...Args>
+auto andop(Args ...args){
+    return (args && ...);
+}
+int main(){
+    std::cout << std::boolalpha << andop(); // true
+}
+
+// C++17
+// using声明中的包展开
+template <class T>
+struct base{
+    base() {}
+    base(T t) : t_(t) {}
+    T t_;
+};
+template <class ...Args>
+struct derived : public base<Args>...{
+    using base<Args>::base...;  // 引入基类的构造函数
+};
+
+// C++20
+// lambda表达式初始化捕获的包展开
+// 下面的代码中，如果delay_invoke的实参都是复杂的对象，按值捕获会严重影响性能，引用捕获可能会导致延迟调用时对象的生命周期已经结束
+template <class F, class... Args>
+auto delay_invoke(F f, Args... args){
+    return [f, args...]() -> decltype(auto)
+    {
+        return std::invoke(f, args...);
+    };
+}
+// 下面的代码通过初始化捕获和移动语义完成
+template <class F, class... Args>
+auto delay_invoke(F f, Args... args){
+    return [f = std::move(f), tup = std::make_tuple(std::move(args)...)]() -> decltype(auto)
+    {
+        return std::apply(f, tup);
+    };
+}
+// 但如果要调用确定的函数时，还需要给f包装一层lambda表达式
+template <typename ...Args>
+void f(Args... args) {}
+template <typename ...Args>
+auto delay_invoke(Args ...args) {
+	return
+		[tup = std::make_tuple(std::move(args)...)]() -> decltype(auto)
+		{
+			return std::apply(
+				[](const auto&... args)->decltype(auto)
+				{
+					return f(args...);
+				}, tup);
+		};
+}
+// 这使得代码变得复杂
+// C++20支持lambda表达式初始化捕获的包展开，则上述代码可以修改为
+template <class ...Args>
+auto delay_invoke(Args... args) {
+	return [...args = std::move(args)]() -> decltype(auto)
+		{   // 注意，这里的...在args之前
+			return f(args...);
+		};
+}
+// 从而，最初的代码也不需要使用std::make_tuple打包
+template <class F, class... Args>
+auto delay_invoke(F f, Args... args){
+    return [f = std::move(f), ...args = std::move(args)]() -> decltype(auto)
+    {
+        return std::invoke(f, args...);
+    };
+}
+// 在初始化捕获中展开参数包，再将初始化后的参数打包
+
+// C++20
+// typename优化，减少了部分情况下typename的使用
+
+// C++17
+// 允许所有常量求值成为非类型模板实参
+// C++17之前，只有隐式转换为整型的常量表达式才能作为非类型模板实参，对于对象指针、函数指针、左值引用、成员指针作为非类型模板实参的情况，要求它们是链接的或静态的，这表明实参对应的内存地址固定了下来
+// C++17允许任何隐式转换到整型或指针的常量表达式作为非类型模板实参
+// 然而，字符串字面量、非静态成员对象、临时对象等仍然不能作为非类型模板实参
+
+// C++20
+// 函数模板添加到实参依赖查找
+namespace N {
+    struct A {};
+    template<class T>
+    int f(T) { return 1; }
+}
+int x = f<N::A>(N::A());    // C++20起可以查找到函数模板N::f
+
+// C++20
+// 允许字面量类类型成为非类型模板形参
+struct A{};
+template <A a>  // C++20之前，类类型无法作为非类型模板形参
+struct B{};
+A a;
+B<a> b; // 错误
+// C++20允许满足以下条件的类类型作为非类型模板形参
+// 所有基类和非静态数据成员都是public且不可变的
+// 所有基类和非静态数据成员的类型都是标量类型、左值引用或前者的(多维)数组
+// 这种类型称为字面量类
+
+// 字符串字面量不能作非类型模板形参
+template<const char *>
+struct X{};
+X<"hello"> x;   // 错误
+// 但通过字面量类类型，可以间接地支持字符串字面量作非类型模板形参
+template <typename T, std::size_t N>
+struct basic_fixed_string{
+    constexpr basic_fixed_string(const T (&foo)[N + 1]){
+        std::copy_n(foo, N + 1, data_);
+    }
+    T data_[N + 1];
+};
+// 推导指引
+template <typename T, std::size_t N>
+basic_fixed_string(const T (&str)[N]) -> basic_fixed_string<T, N - 1>;
+template <basic_fixed_string Str>
+struct X{
+    X(){
+        std::cout << Str.data_;
+    }
+};
+X<"hello world"> x;
+// basic_fixed_string是一个字面量类
+
+
+
 // C++20
 // concept requires 概念和约束
 // 概念
@@ -2712,7 +2947,7 @@ void f(T);
 template<typename T>
 void f(T) requires Hashable;
 // 约束分为合取&&，析取||，不可分割约束，合取和析取短路求值
-// TODO
+
 
 
 
@@ -2960,10 +3195,10 @@ volatile auto [a, b] = x;
 // 支持在operator[]的重载中传入多个参数
 template <class T, size_t R, size_t C>
 struct matrix{
-    T &operator[](const size_t r, const size_t c) noexcept    {
+    T& operator[](const size_t r, const size_t c) noexcept    {
         return data_[r * C + c];
     }
-    const T &operator[](const size_t r, const size_t c) const noexcept    {
+    const T& operator[](const size_t r, const size_t c) const noexcept    {
         return data_[r * C + c];
     }
     std::array<T, R * C> data_;
