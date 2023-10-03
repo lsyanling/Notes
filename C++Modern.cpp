@@ -45,7 +45,7 @@ int add(int a, int b) {return a + b;}	// error
 inline namespace{}  // 内联命名空间
 // 内联命名空间能够把空间内的函数和类型导出到父命名空间中
 // 意义是可以帮助库的作者无缝升级库代码，将最新版本的接口以内联的方式导出到父命名空间
-// 存在同名函数时，只能有一个内联命名空间，否则会造成二义性问题
+// 存在签名相同的函数时，只能有一个内联命名空间，否则会造成二义性问题
 
 // C++17
 // 嵌套命名空间简化语法
@@ -92,7 +92,7 @@ auto f = [=](auto i, auto j) {};
 
 // C++20
 // 函数用auto声明形参
-void func(auto str) {}
+void func(auto str) {}  // 这实际上是简化的函数模板
 
 auto+new	// 避免这样写
 auto i = new auto(5);
@@ -1879,6 +1879,7 @@ auto r = ptr <=> arr1;  // 编译成功
 
 // C++17
 // inline static 成员变量，编译器在该类的定义首次出现时定义和初始化内联静态成员变量
+// inline指明变量的链接性
 
 
 // C++11
@@ -2182,7 +2183,7 @@ auto length = 1cm + 2cm;
 
 // 字面量运算符函数的标识符可以是保留关键字
 
-// C++11
+// C++11 C23
 // 数据对齐
 // alignof 运算符可以用于获取类型的对齐字节长度
 // alignas 说明符可以用来改变类型的默认对齐字节长度
@@ -2319,7 +2320,7 @@ LOG("Hello %d", 2020);
 LOG("Hello %d");    // 展开如下
 printf("[" __FILE__ ":%d] " "Hello 2020", __LINE__, );
 
-// C++20
+// C++20 C23
 // 因此引入了新的宏 __VA_OPT__ 用于表明可选，可以在可变参数为空的情况下使用
 #define LOG(msg, …) printf("[" __FILE__ ":%d] " msg, __LINE__ __VA_OPT__(, ) __VA_ARGS__)   // 逗号是可选的
 
@@ -2815,6 +2816,7 @@ struct base{
 template <class ...Args>
 struct derived : public base<Args>...{
     using base<Args>::base...;  // 引入基类的构造函数
+    using base<Args>::operator()...;    // 引入基类的函数调用运算符
 };
 
 // C++20
@@ -2923,52 +2925,396 @@ struct X{
 X<"hello world"> x;
 // basic_fixed_string是一个字面量类
 
+// C++11
+// 外部模板
+// 在显式实例化时加上extern
+extern template bool foo<double>(double);
+extern template class bar<int>;
+extern template void bar<int>::foo(int);
+// 这将让编译器在链接的时候使用其它翻译单元的模板实例
 
+// C++11
+// friend声明模板形参
+class C;
+class X1{
+    friend class C; // C++11前后都能编译成功
+};
+class X2{
+    friend C; // C++11以前会编译错误，C++11以后编译成功
+};
+class X1{
+    friend C;
+    friend Ct;
+    friend void;    // 忽略
+    friend int;     // 忽略
+};
+template <typename T>
+class R{
+    friend T;   // 当T是内置类型时，忽略，当T是类类型时，即存在友元
+};
+R<C> rc;    // R<C>存在友元C
+
+// DiagDatabase是一个对内的诊断数据库类，它设置InnerVisitor为友元，通过InnerVisitor对数据库数据进行诊断
+// 对外则使用类StandardDatabase，因为它的友元声明为void，所以不存在友元，需要通过标准方法访问数据
+class InnerVisitor{ /*访问SomeDatabase内部数据*/};
+template <typename T>
+class SomeDatabase{
+    friend T;
+    // 内部数据
+public:
+    // 外部接口
+};
+typedef SomeDatabase<InnerVisitor> DiagDatabase;
+typedef SomeDatabase<void> StandardDatabase;
+
+// C++14
+// 变量模板
+template <class T>
+constexpr T PI = static_cast<T>(3.1415926535897932385L);
+int main(){
+    std::cout << PI<float> << std::endl;    // PI<float>是常数
+}
+template <class T, int N>
+T PI = static_cast<T>(3.1415926535897932385L) * N;
+int main(){
+    PI<float, 2> *= 2; // 它就像一个变量，可以随时修改这个值
+}
+// 变量模板被应用于类型萃取
+bool b = std::is_same<int, std::size_t>::value;
+// C++17
+bool b = std::is_same_v<int, std::size_t>;
+
+// C++20
+// explicit(bool)
+// explicit可以接受一个bool类型的常量表达式，用于指定explicit是否生效
+
+// C++20
+// auto占位符简写函数模板
+void f1(auto);                      // 与 template<class T> void f(T) 相同
+void f2(C1 auto);                   // 如果 C1 是概念，那么与 template<C1 T> void f2(T) 相同
+void f3(C2 auto...);                // 如果 C2 是概念，那么与 template<C2... Ts> void f3(Ts...) 相同
+void f4(const C3 auto*, C4 auto&);  // 与 template<C3 T, C4 U> void f4(const T*, U&); 相同
+
+template <class T, C U>
+void g(T x, U y, C auto z);
+// 上面的代码与下面的是相同的
+template<class T, C U, C W> 
+void g(T x, U y, W z); 
 
 // C++20
 // concept requires 概念和约束
+// std::enable_if
+template <class T, class U = std::enable_if_t<std::is_integral_v<T>>>
+struct X{};
+X<int> x1;         // 编译成功
+X<std::string> x2; // 编译失败
+
 // 概念
-// template<auto ...Args>
-// concept conceptName [[attributes]] = requiresExpression;
-template<typename T, typename U>
-concept Derived = std::is_base_of<U, T>::value;
-template<typename T>
-concept Hashable = requires(T a) {
-    { std::hash<T>{}(a) } -> std::convertible_to<std::size_t>;
-};
+template <class C>
+concept IntegerType = std::is_integral_v<C>; // IntegerType是概念名，std::is_integral_v<C>是约束表达式
+template <IntegerType T>
+struct X{};
 // 概念不能递归地提及自身，不能受约束，即不能出现在requires子句中
 // 概念不能被显式实例化、显式特化或部分特化
-// 约束
-template<Hashable T>
-void f(T);
-template<typename T>
-    requires Hashable
-void f(T);
-template<typename T>
-void f(T) requires Hashable;
-// 约束分为合取&&，析取||，不可分割约束，合取和析取短路求值
 
+// 约束
+template <class T>
+requires std::is_integral_v<C>;
+struct X{};
+// 约束表达式是一个bool类型的纯右值常量表达式
+template <class T>
+concept TestConcept = true;
+static_assert(TestConcept<int>); // true
+// TestConcept<int>是一个bool类型的常量表达式
+// 约束表达式还支持 合取&& 和 析取||
+// 合取和析取短路求值
+
+// requires子句
+// 要求是bool类型的常量表达式，且是一个初等表达式或者带括号的任意表达式，以及前述表达式的合取或析取
+constexpr bool bar() { return true; }
+template <class T>
+    requires bar()  // 错误，bar()不是一个初等表达式
+struct X{};
+// 应该改为
+template <class T>
+    requires (bar())
+struct X{};
+
+// requires子句还可以出现在函数模板声明的末尾
+template <class T>
+void foo()
+    requires std::is_integral_v<T>;
+
+// 约束检查顺序
+template <ConstType T>              // 先检查模板形参列表中的约束表达式，即先检查概念
+    requires std::is_pointer_v<T>   // 其次检查模板形参列表之后的requires子句中的约束表达式
+void foo(IntegralType auto)         // 检查简化模板声明中每个拥有受约束的auto占位符类型的形参引入的约束表达式
+    requires std::is_same_v<T, char *const>{}   // 最后检查函数模板末尾的requires子句中的约束表达式
+
+// 原子约束
+// 原子约束是表达式和表达式中模板形参到模板实参映射的组合，简称为形参映射
+// 约束不支持SFINAE
+template <typename T>
+struct S{
+    constexpr operator bool() const { return true; }
+};
+
+template <typename T>
+    requires(S<T>{})
+void f(T);   // #1
+
+void f(int); // #2
+
+void g(){
+    f(0); // 错误，检查 #1 时 S<int>{} 不具有 bool 类型，尽管 #2 能更好地匹配
+}
+// 原子约束必须来自相同的约束表达式，可以理解为只能出现一次
+template <class T>
+constexpr bool is_meowable = true;
+
+template <class T>
+constexpr bool is_cat = true;
+
+template <class T>
+concept Meowable = is_meowable<T>;
+
+template <class T>
+concept BadMeowableCat = is_meowable<T> && is_cat<T>;
+
+template <class T>
+concept GoodMeowableCat = Meowable<T> && is_cat<T>;
+
+template <Meowable T>
+void f1(T); // #1
+
+template <BadMeowableCat T>
+void f1(T); // #2
+
+template <Meowable T>
+void f2(T); // #3
+
+template <GoodMeowableCat T>
+void f2(T); // #4
+
+void g()
+{
+    f1(0); // 错误，有歧义：
+           // BadMeowableCat 和 Meowable 中的 is_meowable<T>
+           // 构成了有区别的不可分割约束且它们并不等同（因此它们不互相包含）
+
+    f2(0); // 调用 #4，它比 #3 更受约束
+           // GoodMeowableCat 从 Meowable 获得其 is_meowable<T>
+}
+// 原子约束见书41.5
+
+// requires表达式
+// requires关键字可以引入requires子句，还可以用于定义requires表达式，该表达式是一个bool类型的纯右值表达式
+template <class T>
+concept Check = requires {
+    T().clear();
+};
+template <Check T>
+struct G{};
+G<std::vector<char>> x;    // 编译成功
+G<std::string> y;          // 编译成功
+G<std::array<char, 10>> z; // 编译失败
+
+// requires表达式还支持形参列表，在编译期进行计算
+template <class T>
+concept Check = requires(T a, T b) {    // 表达式中的内容称为要求序列
+    a.clear();
+    a + b;
+};
+// 因此，requires表达式的形参列表不支持运行期的...
+template <typename T>
+concept C = requires(T t, ...) { // 编译失败
+    t;
+};
+
+// 要求序列
+// 要求序列分为4种
+// 简单要求，不以requires关键字开始的的要求，只断言表达式的有效性，不进行表达式求值
+template <typename T>
+concept C =
+    requires(T a, T b) {
+        a + b;  // 简单要求
+    };
+
+// 类型要求，以typename关键字开始的要求，后面跟一个类型名，用于检查嵌套类型、类模板以及别名模板特化的有效性
+template <typename T, typename T::type = 0>
+struct S;
+template <typename T>
+using Ref = T &;
+template <typename T>
+concept C = requires {
+    typename T::inner; // 要求嵌套类型
+    typename S<T>;     // 要求类模板特化
+    typename Ref<T>;   // 要求别名模板特化
+};
+template <C c>
+struct M{};
+struct H{
+    using type = int;
+    using inner = double;
+};
+
+// 复合要求
+// 复合要求由 { 表达式 }、noexcept、->后的返回类型约束组成
+// 要求替换模板实参到{E}中的E有效，如果有noexcept，则要求E不会抛出异常
+// 如果有->后的返回类型约束，还要求E的结果类型即 decltype((E)) 满足返回类型约束
+template <class T>
+concept Check = requires(T a, T b) {
+    { a.clear() } noexcept;
+    { a + b } noexcept -> std::same_as<int>;    // 要求a + b 是int类型
+};
+
+// 嵌套要求
+// 嵌套要求是以requires开始的要求
+template <class T>
+concept Check = requires(T a, T b) {
+    requires std::same_as<decltype((a + b)), int>;
+};
+// 此外，requires表达式中的形参不能参与运算
+template <typename T>
+concept C = requires(T a) {
+    requires sizeof(a) == 4; // 编译成功
+    requires a == 0;         // 编译失败，a的值无法计算
+};
+
+// 约束可变参数模板
+template <class T>
+concept C1 = true;
+template <C1... T>
+struct s1{};    // s1的约束展开后是 (C1<T> && ...) 即每个参数都需要满足概念C1
+
+template <class... Ts>  // 这里的形参包没有影响
+concept C2 = true;
+template <C2... T>
+struct s2{};    // 仍然是 (C2<T> && ...)
+
+template<class T, class U> concept C3 = true;
+template<C3<int> T> struct s3 {};
+// 这里C3只有一个参数int，其行为是将被约束的类型T填入C3的第一个模板参数
+template<C3<int>… T> struct s3 {}; // 从而约束展开为(C3<T, int> && ...)
+
+// 约束类模板特化
+// 编译器会选择满足约束的更特殊的模板进行特化
+template<typename T>
+concept C = requires (T t) { t.f(); };
+template<typename T>
+struct S {
+    S(){
+        std::cout << "1.template<typename T> struct S" << std::endl;
+    }
+};
+template<C T> struct S<T> {
+    S(){
+        std::cout << "2.template<C T> struct S<T>" << std::endl;
+    }
+};
+struct Arg { void f(); };
+S<int> s1; // 不满足概念C，1.template<typename T> struct S
+S<Arg> s2; // 满足概念C，2.template<C T> struct S<T>
+
+// 如果只需要约束构造函数以区分不同类型的构造方式，可以在一个模板声明中完成
+template <typename T>
+struct S{
+    S(){
+        std::cout << "1.call S()" << std::endl;
+    }
+    S() requires requires(T t) { t.f(); } { // 第一个requires是子句，第二个requires是requires表达式，一个bool类型的纯右值表达式
+        std::cout << "2.call S() requires requires(T t)" << std::endl;
+    }
+};
+struct Arg{
+    void f();
+};
+S<int> s1;
+S<Arg> s2;
+
+// 约束auto
+// 可以用概念约束auto和decltype(auto)简写的函数模板，实际上还可以扩展到变量、非模板函数和lambda表达式
+template <class C>
+concept IntegerType = std::is_integral_v<C>;
+
+IntegerType auto i1 = 5.2; // 编译失败
+IntegerType auto i2 = 11;  // 编译成功
+IntegerType decltype(auto) i3 = 4.8; // 编译失败
+IntegerType decltype(auto) i4 = 7;   // 编译成功
+IntegerType auto foo1() { return 1.1; } // 编译失败
+IntegerType auto foo2() { return 0; }   // 编译成功
+auto bar1 = []() -> IntegerType auto{ return 1.0; }; // 编译失败
+auto bar2 = []() -> IntegerType auto{ return 10; };  // 编译成功
+// 需要注意，auto和decltype(auto)必须紧跟在约束的后面，因此需要注意cv限定符的位置
+const IntegerType auto i5 = 23; // 编译成功
+IntegerType auto const i6 = 8;  // 编译成功
+IntegerType const auto i7 = 6;  // 编译失败
 
 
 
 // C++11
-// thread
+// thread 线程
 // thread，join，detach，joinable，this_thread，get_id，native_handle，swap，yield，sleep_for，sleep_until
 // mutex
-// mutex，lock，unlock，recursive_mutex，time_mutex，recursive_time_mutex，try_lock_for，try_lock_until
-// lock_guard，try_lock，unique_lock，adopt_lock，try_to_lock，defer_lock，release
+// mutex，lock，unlock，recursive_mutex，time_mutex，recursive_time_mutex，try_lock_for，try_lock_until，shared_mutex
+// lock_guard，try_lock，unique_lock，shared_lock，adopt_lock，try_to_lock，defer_lock，release
 // conditional_variable
 // conditional_variable，wait，notify_one，notify_all，call_once
 // future
 // future，promise，get_future，get，packaged_task，packaged_task::valid，packaged_task::reset，async，launch::async，launch::deferred
 
+// shared_mutex不支持try_lock_for 和 try_lock_until
+
+// promise future
+// 先初始化promise，然后get_future，再将promise的地址传入新线程，通过future::get()等待结果，最后join线程
+void func(std::promise<int>* p_prom) {
+	p_prom->set_value(10);
+}
+
+int main(int argc, char* argv[]) {
+	std::promise<int> prom;
+	std::future<int> futu = prom.get_future();
+	std::thread t(func, &prom);
+	int result = futu.get();
+	print("{}", result);
+	t.join();
+}
+
+// packaged_task
+// 先传入func初始化packaged_task，然后get_future，移动packaged_task，将移动的结果和func的参数传入新线程，通过future::get()等待结果，最后join线程
+int func(int i) {
+	return i + 10;
+}
+
+int main(int argc, char* argv[]) {
+	std::packaged_task<int(int)> task(func);
+	std::future<int> futu = task.get_future();
+	std::thread t(std::move(task), 5);
+	int result = futu.get();
+	print("{}", result);
+	t.join();
+}
+
+// std::async
+// 向std::async传入函数和函数的参数，std::async会自动创建线程和一个promise，并将这个promise传递给线程
+// std::async返回与promise相关联的future，当传入的函数执行完毕退出时，future的值将被设置
+int func(int i) {
+    return i + 10;
+}
+
+int main(int argc, char* argv[]) {
+	std::future<int> futu = std::async(std::launch::async, func, 5);
+	int result = futu.get();
+	print("{}", result);
+}
+
 // C++20
-// jthread，自动join的线程
+// jthread，thread的RAII，自动join的线程
 
 // 线程函数传入引用参数，实际上是新线程堆栈中一个复制的临时值的引用，应使用std::ref()
 
 // C++20
-// 协程
+// coroutine 协程
 // 协程是一种可以被挂起和恢复的函数，它提供了一种创建异步代码的方法
 // co_await，co_return，co_yield，具有这三个关键字中任何一个的函数就是协程
 
@@ -3059,6 +3405,113 @@ U u = {{1}};
 X* p = new (&u.x) X{2}; // replace new修改常量区域
 // u.x.n未定义，但是可以使用std::launder
 *std::launder(&u.x.n) == 2  // true
+
+// C++17
+// 类模板std::optional
+// 表示一个值可能存在也可能不存在
+struct Out {
+    string out1 { "" };
+    string out2 { "" };
+};
+
+std::optional<Out> func(const string& in) {
+    Out o;
+    if (in.size() == 0)
+        return std::nullopt; // std::nullopt是std::optional无值的表达形式，相当于{}
+    o.out1 = "hello";
+    o.out2 = "world";
+    return { o };
+}
+
+int main() {
+    if (auto ret = func("hi"); ret.has_value()) {   // std::optional::has_value()
+        cout << ret->out1 << endl;
+        cout << ret->out2 << endl;
+    }
+}
+
+// C++17
+// 类型萃取
+// std::is_void_v，std::is_same_v，std::is_integral_v，std::is_floating_point_v，std::is_array_v
+// std::conjunction 与&&
+// std::disjunction 或||
+// std::negation 非!
+template <typename... Ts>
+using all_is_integral = std::conjunction<std::is_integral<Ts>...>;
+
+std::cout << std::boolalpha;
+std::cout << all_is_integral<int, short, long>::value << std::endl;  // true
+std::cout << all_is_integral<int, double, long>::value << std::endl; // false
+
+// C++17
+// std::clamp()
+// 用于将一个值限制在范围内，支持任意可比较类型
+int main() {
+    int x = 10;
+    std::cout << std::clamp(x, 1, 5) << std::endl;   // 输出 5
+    std::cout << std::clamp(x, 15, 20) << std::endl; // 输出 15
+    std::cout << std::clamp(x, 1, 20) << std::endl;  // 输出 10
+}
+
+// C++17
+// std::filesystem 文件系统
+int main() {
+    std::filesystem::path p("C:/Users/John/Documents/test.txt");
+    std::cout << p.filename() << std::endl;     // 输出 "test.txt"
+    std::cout << p.parent_path() << std::endl;  // 输出 "C:/Users/John/Documents"
+    std::cout << std::boolalpha << p.is_absolute() << std::endl;    // 输出 true
+    std::cout << std::boolalpha << p.has_filename() << std::endl;   // 输出 true
+}
+// std::filesystem::directory_iterator，表示目录中所有文件和子目录的迭代器
+int main() {
+    std::filesystem::directory_iterator it("C:/Users/John/Documents");
+    for (auto& entry : it) 
+        std::cout << entry.path() << std::endl;
+}
+// std::filesystem::exists()
+std::cout << std::boolalpha << std::filesystem::exists("C:/Users/John/Documents"); // true
+
+// C++17
+// std::string_view
+// 常量字符串视图
+
+// C++17
+// std::any
+// any相当于void*，可以存储任何类型，但是比void*安全
+// 需要注意any_cast必须符合存储的类型，否则将引发异常
+int main(){
+    std::any a = 42;
+    std::cout << std::any_cast<int>(a) << std::endl;
+
+    a = 3.14;
+    std::cout << std::any_cast<double>(a) << std::endl;
+
+    a = "hello";
+    std::cout << std::any_cast<const char *>(a) << std::endl;
+}
+
+// C++17
+// std::gcd() std::lcm()
+// 只接受两个整数参数，且必须支持 % 运算符，返回正数
+// 如果输入的参数是0，返回0
+
+// C++17
+// std::variant
+// 相当于联合
+std::variant<int, double, std::string> myVariant; 
+// 向variant中存储int类型的值
+myVariant = 42;
+// 使用std::get获取variant中存储的值
+int intValue = std::get<int>(myVariant);
+
+// 使用std::visit对variant中存储的值进行操作
+std::visit(
+    [](auto&& arg) {
+        std::cout << "The value is: " << arg << '\n';
+    }, myVariant);
+
+// C++17
+// std::byte
 
 // C++11
 // 复制消除
@@ -3242,20 +3695,20 @@ import std.compat;  // 包含所有标准库函数和C函数
 // C++23
 // Narrowing contextual conversions to bool
 // 在下列情况下，允许int到bool的隐式转换
-//  | Before | After |
-//  | ----------------------------------------- | --------------------------------- |
-    | if constexpr(bool(flags & Flags::Exec))   | if constexpr(flags & Flags::Exec) |
-    | if constexpr(flags & Flags::Exec != 0)    | if constexpr(flags & Flags::Exec) |
-    | static_assert(N % 4 != 0);                | static_assert(N % 4);             |
-    | static_assert(bool(N));                   | static_assert(N);                 |
+// | Before | After |
+// | ----------------------------------------- | --------------------------------- |
+// | if constexpr(bool(flags & Flags::Exec))   | if constexpr(flags & Flags::Exec) |
+// | if constexpr(flags & Flags::Exec != 0)    | if constexpr(flags & Flags::Exec) |
+// | static_assert(N % 4 != 0);                | static_assert(N % 4);             |
+// | static_assert(bool(N));                   | static_assert(N);                 |
 
 
-// C23 C++23
+// C++23 C23
 // #elifdef #elifndef
 // C23中加入了这两个预处理指令，为了兼容C，C++23也将它们加入了
 // #ifdef 和 #ifndef 分别是 #if defined() 和 #if !defined() 的简写，而C23和C++23之前 #elif defined() 和 #elif !defined() 却并没有与之对应的简写指令
 
-// C23 C++23
+// C++23 C23
 // #warning
 #ifndef FOO
 #warning "FOO defined, performance might be limited"
