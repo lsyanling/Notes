@@ -2647,7 +2647,7 @@ T baz(T t, U u){
     std::cout << t << ":" << u << std::endl;
     return t;
 }
-template <class ..Args>
+template <class ...Args>
 void foo(Args ...args) {}
 template <class ...Args>
 class bar{
@@ -3375,19 +3375,177 @@ int main()
 // 4
 // end
 
-// co_await运算符原理
-auto n = co_await std::async(foo);
-// 相当于
-std::future<std::future<int>> expr = std::async(foo);
-auto n = co_await expr;
-// 其中expr称为可等待对象，即该对象可以被等待
-// 可等待对象需要实现三个成员函数，await_resume，await_ready和await_suspend
-// 具备这三个函数的对象同时又被称为等待器
-// await_ready用于判断可等待对象是否已经准备好返回
-// await_suspend用于调度协程的执行流程，包括异步等待结果、恢复协程、返回控制权给主调函数
-// await_resume用于接收异步执行结果
+// // co_await运算符原理
+// auto n = co_await std::async(foo);
+// // 相当于
+// std::future<std::future<int>> expr = std::async(foo);
+// auto n = co_await expr;
+// // 其中expr称为可等待对象，即该对象可以被等待
+// // 可等待对象需要实现三个成员函数，await_resume，await_ready和await_suspend
+// // 具备这三个函数的对象同时又被称为等待器
+// // await_ready用于判断可等待对象是否已经准备好返回
+// // await_suspend用于调度协程的执行流程，包括异步等待结果、恢复协程、返回控制权给主调函数
+// // await_resume用于接收异步执行结果
 
-// co_await运算符的重载 TODO
+
+
+// 协程是一个函数，它通常返回一个promise对象
+// 这个promise类中实现了一个promise_type的嵌套类，并且包含一个std::coroutine_handle<promise_type>的对象
+struct promise{
+    struct promise_type{};
+    std::coroutine_handle<promise_type> handle;
+}
+// 在promise_type中，实现了以下函数
+struct promise_type{
+    std::suspend_never initial_suspend() { return {}; }
+    std::suspend_always final_suspend() { return {}; }
+    std::suspend_always yield_value() { return {}; }
+};
+// 在std::suspend_never中，实现了以下函数
+struct std::suspend_never{
+    bool await_ready() { return true; }
+    void await_suspend(std::coroutine_handle<>) {}
+    void await_resume() {}
+};
+// 当协程开始执行时，会自动执行下面的代码
+co_await promise_type.initial_suspend();
+// 注意，该函数返回一个std::suspend_never对象，实际上相当于下面的代码
+co_await std::suspend_never{};
+
+// co_await
+// co_await一个表达式，要求这个表达式是可等待体，即实现了std::suspend_never中的三个函数
+struct awaitable{
+    bool await_ready() { return false; }
+    void await_suspend(std::coroutine_handle<>) {}
+    void await_resume() {}
+};
+// 调用一个可等待体
+co_await awaitable;
+// 就看这个awaitable的await_ready()返回什么，返回true的话协程就继续往下执行
+// 如果返回false，协程暂停执行，调用awaitable.await_suspend(std::coroutine_handle<>)，然后返回到主调函数
+// 注意，调用await_suspend()会传入一个协程句柄，即promise对象中的那个句柄
+std::coroutine_handle<promise_type> handle;
+
+// 因为std::suspend_never对象的await_ready()总是返回true，因此在初始化时，协程总是会继续往下执行
+// 综上所述，当协程开始执行时，总是调用
+co_await promise_type.initial_suspend();
+// 并且往下执行
+
+// 回到await_suspend()这个函数，它要求一个std::coroutine_handle<>的参数，即promise对象中的协程句柄handle
+// 这是因为await_suspend()内部通常会启动一个异步任务，在这个异步任务中可能会用到协程句柄
+// 例如，调用handle.resume()
+handle.resume();
+// 这将会调用awaitable.await_resume()，而该函数的返回值就是co_await表达式的值
+// 由于在异步任务中调用了handle.resume()，即调用了awaitable.await_resume()，因此会恢复协程，将由这个线程继续执行协程的代码
+
+// co_yield
+co_await awaitable;
+// 实际上等价于
+co_await promise_type.yield_value(awaitable);
+// 前面提到promise_type实现了以下函数
+struct promise_type{
+    std::suspend_never initial_suspend() { return {}; }
+    std::suspend_always final_suspend() { return {}; }
+    std::suspend_always yield_value() { return {}; }
+};
+// co_yield会调用promise_type.yield_value()，然后暂停协程执行，并返回到主调函数
+// 注意，yield_value()的参数可以自定义，且该参数就是co_yield运算符的操作数
+struct promise_type{
+    std::suspend_always yield_value(int i) { return {}; }
+};
+co_yield 10;    // 调用promise_type.yield_value(10);
+
+ 
+
+// 在协程函数的主调函数中，通过协程函数的返回值也可以恢复协程的执行
+// 下面是一个例子，从main()函数开始跟随注释指引阅读
+struct promise{
+    struct promise_type{
+        std::suspend_never initial_suspend() { return {}; }
+        std::suspend_always final_suspend() { return {}; }
+        std::suspend_always yield_value(int i) { return {}; }
+    };
+    std::coroutine_handle<promise_type> handle;
+};
+struct awaitable{
+    bool await_ready() { return false; }
+    void await_suspend(std::coroutine_handle<> handle) {
+        // 启动一个线程，异步执行下面的lambda表达式
+        thread(
+            [handle]
+            {
+                // 下面的代码由main()函数的主线程以外的另一线程执行
+                handle.resume();    // 恢复协程执行，其过程如下
+                {
+                    // 调用
+                    awaitable.await_resume();
+                    // 该函数的返回值是co_await表达式的值，在这里是void
+                    // 恢复协程执行，该线程执行coroutineFunc()中co_await的下一行，即执行code_2
+                }
+
+                // code_1
+
+                // 现在，从coroutineFunc()的co_yield处返回到这里，继续执行
+                // lambda表达式执行完毕，异步线程结束，见main()函数的sleep_for()
+            });
+        // 然后返回主调函数，也就是协程函数的co_await处
+    }
+    void await_resume() {}
+};
+promise coroutineFunc(){
+    co_await awaitable(); // 构造awaitable对象，这是一个可等待体，co_await运算符的执行过程如下
+    {
+        // 调用
+        awaitable.await_ready();
+        // 由于await_ready()返回false，调用await_suspend()，传入promise.handle
+        await_suspend(promise.handle); // 执行过程见await_suspend()
+
+        // 现在，从await_suspend()返回到这里，暂停协程的执行，返回主调函数，也就是main()
+    }
+
+    // code_2
+
+    co_yield 10; // 现在，异步线程执行到这里，过程如下
+    {
+        // 调用
+        promise_type.yield_value(10);
+        // 该函数返回一个std::suspend_always对象，调用该对象的await_ready成员函数
+        std::suspend_always.await_ready();
+        // 该函数返回false，因此暂停协程执行，返回到主调函数，即lambda表达式中的code_1
+    }
+
+    // code_3
+    // 协程执行完毕，返回主调函数，即main()函数的code_4
+}
+int main(){
+    auto p = coroutineFunc();   // 调用协程函数，获取协程函数的返回值，其过程如下
+    {
+        // 先调用
+        promise_type.initial_suspend();
+        // 该函数返回一个std::suspend_never对象，然后调用该对象的await_ready成员函数
+        std::suspend_never.await_ready();
+        // 该函数返回true，因此恢复协程的执行
+        // 执行coroutineFun()c的第一行代码，即
+        co_await awaitable();   // 执行过程见协程coroutineFunc()
+
+        // 现在，从coroutineFunc()的co_await处返回到这里，主线程继续执行
+    }
+    std::this_thread::sleep_for(1s); // 等待promise中的异步任务执行，见awaitable.await_suspend()的lambda表达式
+
+    // 现在，异步线程执行完毕，主线程继续执行
+    p.resume(); // 恢复协程执行，执行coroutineFunc()的code_3
+
+    // code_4
+}
+
+
+
+
+
+
+
+
+
 
 
 
