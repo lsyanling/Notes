@@ -1,7 +1,21 @@
+// 2023.12
+// index.js是入口
+// react核心包
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+
+// 导入根组件
+import App from './App'
+// 把App根组件渲染到id为root的dom节点
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(
+	<App />
+);
+
 // JSX列表渲染;
 let songs = [
-	{ id: 1, name: "我的歌" },
-	{ id: 2, name: "你的歌" },
+	{ id: 1, name: "111" },
+	{ id: 2, name: "222" },
 ];
 
 const list = (
@@ -11,10 +25,8 @@ const list = (
 		))}
 	</ul>
 );
-map将songs的每一项映射为一个 < li > 元素;
-map遍历数组, 将数组值传入参数方法(上面是箭头函数), 返回一个新的数组;
-
-为每个 < li > 元素添加一个唯一的key属性;
+// map将songs的每一项映射为一个 <li> 元素
+// 为每个 <li> 元素添加一个唯一的key属性，这是react框架使用的，例如在渲染优化上
 list = (
 	<ul>
 		{songs.map((item) => (
@@ -23,15 +35,156 @@ list = (
 	</ul>
 );
 
+// 条件渲染
+// && 和 ? : 两种方式
+
 // 函数组件
-函数组件名必须以大写字母开头, 函数必须有返回值, 返回null表示不渲染任何内容;
-组件名即渲染标签名;
+// 组件名必须以大写字母开头, 函数必须有返回值, 返回null表示不渲染任何内容;
+// 组件名即标签名;
 function Hello() {
 	return <div>2333</div>;
 }
 ReactDOM.render(<Hello></Hello>, document.getElementById("root"));
 
-// 类组件
+// useState
+// 是一个react hook函数，用于向组件添加一个状态
+// 返回一个数组，数组的第一个元素是状态的值，第二个元素是set函数，用于修改状态
+// useState()的参数是状态的初始值
+const [count, setCount] = useState(0);
+setCount(count + 1);
+// 如果状态是复杂对象，需要保证每次传入一个全新的对象，不能改变原对象的键值，即要改变引用地址
+const [obj, setObj] = useState({ name: "pink", age: 17 });
+// 可以先解包原状态对象，再更新某个属性
+setObj({ ...obj, age: 18 });
+
+// 删除、过滤项
+// filter()方法返回一个新数组，不会改变原数组
+// splice()方法会改变原数组
+// 通过filter()方法过滤出不需要删除的项
+commentList = [
+	{ id: 1, name: "pink", comment: "pink is good"}, 
+	{ id: 2, name: "blue", comment: "blue is good" }
+]
+
+function Comments() {
+	const [comments, setComments] = useState(commentList);
+	const handleDelete = (id) => {
+		const newComments = comments.filter((item) => item.id !== id);
+		setComments(newComments);
+	}
+	return (
+		comments.map((item) => (
+			<button onClick={() => handleDelete(item.id)}>删除</button>
+		))
+	)
+}
+
+// 样式控制
+// 行内样式，内花括号表示一个对象，采用驼峰写法
+<div style={{ color: "red", fontSize: '10px' }}></div>;
+
+// 类名
+// 首先将css文件import进来
+import "./index.css";
+.foo{
+	color: red;
+}
+// react采用className属性，而不是class属性
+<div className="foo"></div>;
+
+// 动态类名
+// 模板字符串
+<div className={`pink ${isShow ? "show" : ""}`}></div>;
+
+// 需求：点击tab项，做高亮处理
+// 点击谁就把谁的id记录下来，然后和遍历时的每一项的id匹配，谁匹配到就设置负责高亮的className
+tabList = [{ id: 1, text: "最新" }, { id: 2, text: "最热" }];
+function Tabs(){
+	const [tabs, setTabs] = useState(tabList);
+	const [nowTabId, setNowTab] = useState(1);
+	const handleTabChange = (id) => {
+		setNowTab(id);
+	};
+	
+	return (
+		tabs.map((item) => (
+			<div
+				key={item.id}
+				// 这里是一个模板字符串拼接，如果item.id等于nowTabId，就添加active类名，下面用classnames库优化
+				className={`nav-item ${item.id == nowTabId && 'active'}`}
+				onClick={() => handleTabChange(item.id)}>
+					{item.text}
+			</div>
+		))
+	)
+}
+
+// 排序，这里用lodash库
+import _ from "lodash";
+setTabs(_.orderBy(tabs, "id", "desc"));
+setTabs(_.orderBy(tabs, "id", "asc"));
+
+// classnames库
+// 通过条件动态控制className
+import classNames from "classnames";
+// key表示要控制的类名，value表示条件，如果value为true，就添加key类名
+<div className={classNames('nav-item', { active: item.id == nowTabId })} />
+
+// 受控组件绑定
+// 通过useState控制表单元素的值
+function Input() {
+	const [value, setValue] = useState("");
+	return (
+		<input
+			type="text"
+			value={value}
+			onChange={(e) => setValue(e.target.value)}
+		/>
+	);
+}
+
+// React获取DOM
+// 通过hook函数 useRef() 获取DOM元素，并绑定到DOM元素的ref属性上
+// useRef()的参数是初始值，返回一个对象，当DOM可用时，对象的current属性指向DOM对象
+function GetDom(){
+	const domRef = useRef(null);
+	const handleClick = () => {
+		console.dir(domRef.current);
+	}
+	return (
+		<div>
+			<div ref={domRef}></div>
+			<button onClick={handleClick}>获取DOM</button>
+		</div>
+	)
+}
+
+// uuid库
+// 生成唯一id
+import { v4 as uuidv4 } from "uuid";
+uuidv4();	// 生成一个随机id
+
+// dayjs库
+// 日期格式化
+import dayjs from "dayjs";
+dayjs(new Date()).format("YYYY-MM-DD HH:mm:ss");
+
+// 元素聚焦
+// 通过useRef()获取DOM元素，然后调用DOM的focus()方法
+function Focus() {
+	const inputRef = useRef(null);
+	const handleClick = () => {
+		inputRef.current.focus();
+	};
+	return (
+		<div>
+			<input type="text" ref={inputRef} />
+			<button onClick={handleClick}>聚焦</button>
+		</div>
+	);
+}
+
+// 类组件，react 18不再推荐
 类组件名必须以大写字母开头, 组件必须继承自React.Component;
 类组件必须提供render(); // render()方法必须有返回值
 class Hello extends React.Component {
@@ -40,16 +193,137 @@ class Hello extends React.Component {
 	}
 }
 
-// 合成事件
-事件处理中的事件对象e即合成事件;
+// 绑定事件
+// 合成事件，即事件处理中的事件对象e;
 class Hello extends React.Component {
 	render() {
-		return <div onClick={handleClick}>2333</div>;
+		return <button onClick={handleClick2}>123</button>;
 	}
-	handleClick(e) {
+	handleClick1() {
+		console.log("点击了");
+	}
+	handleClick2(e) {
 		e.preventDefault(); // 阻止浏览器的默认行为 如超链接跳转
 	}
 }
+
+// 带参数的事件
+// 事件处理函数的调用打包成箭头函数作为事件处理参数
+class Hello extends React.Component {
+	render() {
+		return <button onClick={(e) => handleClick(e, "123")}>123</button>;
+	}
+	handleClick(e, str) {
+		console.log(str);
+		e.preventDefault();
+	}
+}
+
+// 数据传递
+// 父传子，子组件接受props参数，父组件通过props向子组件传递数据
+// props是一个只读对象，里面包含了父组件传递过来的数据
+function Son(props){
+	return <div>{props.name}</div>
+}
+function Father(){
+	const name = "pink";
+	return <Son name={name} />
+}
+// props的children属性，表示组件标签的子节点，当组件标签有子节点时，props就会有该属性
+// 这里，Son组件有一个子节点，因此在props中有children属性
+function Father(){
+	return (
+		<Son>
+			<div>子节点</div>
+		</Son>
+	)
+}
+
+// 子传父，父组件提供回调函数，子组件要传递的数据作为回调函数的参数
+function Son(props){
+	return <button onClick={() => props.onReceive("pink")}>按钮</button>
+}
+
+// context跨层传递数据
+// 从顶层向底层传递数据，即顶层只能是发送方，底层只能是接收方
+// 使用hook函数createContext()创建一个上下文对象MsgContext，该对象中有一个组件Provider
+// MsgContext.Provider组件作为父结点包裹子组件，通过value属性向子组件传递数据
+const MsgContext = createContext(); // 创建上下文对象
+// 在接收消息的组件中调用hook函数useContext接收数据参数
+function App(){
+	const msg = "message";
+	return (
+		<MsgContext.Provider value={msg}>
+			<A />
+		</MsgContext.Provider>
+	)
+}
+function A() {
+	return <B />
+}
+function B() {
+	const msg = useContext(MsgContext);
+	return <div>{msg}</div>
+}
+
+// hook函数useEffect
+// 用于在React组件中创建由渲染本身引起的操作，例如发送Ajax请求，更改DOM等
+// useEffect函数有两个参数，第一个是副作用函数，即要执行的操作，第二个是依赖项数组，是可选的，会影响副作用函数的执行
+// 如果没有依赖项数组，每次组件渲染或更新完毕后都会执行，当依赖项数组为空时，表示只在组件渲染完毕后执行一次，
+useEffect(() => {}, []);
+const URL = "http://localhost:3000/api/list";
+function App() {
+	useEffect(() => {
+		// 异步请求数据，应当在组件渲染完毕后执行，因此放在useEffect()中
+		async function getData() {
+			const res = await fetch(URL);
+			const data = await res.json();
+			console.log(data);
+		}
+		getData();
+		console.log("组件渲染完毕");
+	}, []);
+	return <div>2333</div>;
+}
+// 当依赖项数组不为空时，表示只有依赖项发生变化时才会执行副作用函数
+const [count, setCount] = useState(0);
+useEffect(() => {}, [count]);	// 当count变化时执行副作用函数
+
+// 清除副作用
+// 当组件卸载时，清除副作用
+useEffect(() => {
+	// 在副作用函数中返回一个函数，在这里清除副作用
+	// 清除副作用的常见时机是在组件卸载时自动执行
+	const timer = setInterval(() => { 
+		console.log("定时器执行了"); 
+	}, 1000);
+	return () => {
+		// 清除定时器
+		clearInterval(timer);
+	};
+}, []);
+
+// 自定义hook函数
+// 自定义hook函数必须以use开头
+function useCount() {
+	const [count, setCount] = useState(0);
+	const add = () => {
+		setCount(count + 1);
+	};
+	// 返回要使用的对象、函数等
+	return [count, add];
+}
+
+// hook函数的使用规则
+// 只能在组件或自定义hook函数中调用hook函数，不能在外部或普通函数中使用
+// 只能在组件的最外层使用hook函数，不能在循环、条件判断、嵌套函数中使用
+// 只能在React函数组件中使用hook函数，不能在普通的js函数中使用
+
+
+
+
+
+
 
 // state
 类组件就是有状态组件, 函数组件就是无状态组件;
