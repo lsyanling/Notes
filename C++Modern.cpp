@@ -205,7 +205,7 @@ struct S1{
     decltype(x1 + x3) x4;
 };
 
-// 可以在函数形参列表和返回值中使用
+// decltype可以在函数形参列表和返回值中使用
 int x1 = 0;
 decltype(x1) sum(decltype(x1) a1, decltype(a1) a2) {return a1 + a2;}
 auto x2 = sum(5, 10);
@@ -3566,7 +3566,7 @@ auto co = []() -> coroutine {
 }
 // co是一个lambda表达式，同时也是一个协程
 
-
+// final_suspend()与initial_suspend()类似，是在协程结束时自动调用的，不同的是，final_suspend()必须是noexcept的
 
 
 
@@ -3892,3 +3892,307 @@ import std.compat;  // 包含所有标准库函数和C函数
 #ifndef FOO
 #warning "FOO defined, performance might be limited"
 #endif
+
+
+// C++23
+// 显式对象形参 this
+// this指针是隐式对象形参，默认是成员函数的第一个参数
+// 在参数列表后面为this指针添加引用和cv限定符
+struct A {
+    void f() const&;
+    void f() &&;
+};
+// C++23允许使用this声明成员函数的显式对象形参
+struct A {
+    // 显式对象形参可以是值或者引用类型，值类型在传参时会产生复制
+    void foo(this A) {}
+    void foo(this A&&) {}
+    // 显式对象形参不必是这个类的类型，只要可以转换到这个类
+    void foo(this B) {}
+    operator B() { 
+        return {};
+    }
+
+    int a;
+    void foo(this A& self) {
+        // 在声明了显式对象形参的成员函数中，不能再使用this指针
+        this->a = 0;    // 错误
+        self.a = 0;     // 正确
+    }
+
+    // 声明显式对象形参后，不能再为this指针添加引用和cv限定符
+    void foo(this A&) const& {} // 错误
+    // 但是可以为显式的对象形参添加引用和cv限定符
+    void foo(this const A&&) {}
+
+    // 构造函数、析构函数、静态成员函数不能声明显式对象形参
+    A(this A&) = default;   // 错误
+    ~A(this A&) = default;  // 错误
+    static void f(this A&); // 错误
+
+    // 显式对象形参函数和隐式对象形参函数可以重载，前提是可以进行重载决议
+    void foo(this A& self); // 显式对象形参的类型是 A&
+    void foo() &&;          // 可以重载，隐式对象形参的类型是 A&&
+    void foo() const &;     // 可以重载，隐式对象形参的类型是 const A&
+    void foo() &;           // 不能重载，隐式对象形参的类型是 A&
+};
+
+// 显式对象形参可以用于函数模板，可以推导this
+struct A {
+    // 隐式对象形参不能使用模板
+    const int& foo() const&;
+    int& foo() &;
+
+    // 显式对象形参可以减少重复编码
+    template<typename T>
+    void foo(this T&& self) {}
+
+    // 也可以利用简写函数模板
+    decltype(auto) func(this auto&& self) {}
+};
+A a1;
+const A& a2 = a1;
+a1.foo();       // T推导为A&
+a2.foo();       // T推导为const A&
+std::move(a1).foo(); // T推导为 A，类型为 A&&
+
+// 与隐式对象形参不同，指向显式对象形参成员函数的指针是普通的函数指针
+struct A {
+    void bar(int) {}
+    void foo(this A self, int) {}
+};
+auto p1 = &A::bar;   // p1的类型是 void (A::*)(int)
+auto p2 = &A::foo;   // p2的类型是 void (*)(A, int)
+
+// 使用示例
+struct A {
+    int* m_data;
+    A() : m_data(new int[5]) {}
+    ~A() { delete[] m_data; }
+
+    int& operator[](size_t i) & { 
+        return m_data[i]; 
+    }
+    const int& operator[](size_t i) const& { 
+        return m_data[i]; 
+    }
+    int&& operator[](size_t i) && { 
+        return m_data[i]; 
+    }
+
+    // 显式对象形参可以减少重复编码
+    // decltype(auto)通过值类别推导引用
+    decltype(auto) operator[](this auto&& self, size_t i) { 
+        // std::forward_like转发cv限定和引用
+        return std::forward_like<decltype(self)>(self.m_data[i]); 
+    }
+};
+
+
+
+// CRTP 奇异递归模板模式
+// 在继承时将派生类作为模板参数传递给基类
+struct A : base<A>{};
+// 可以这样理解，编译器看到base<A>时不需要知道A是什么，直到实例化base<A>时才需要知道A的定义，这时它的定义，即继承自base<A>的事实已经确定下来
+// 这是利用了模板的延迟实例化特性
+
+// CRTP通常用于实现静态多态
+template<typename T>
+struct Base {
+    void foo() {
+        static_cast<T*>(this)->foo();
+    }
+};
+struct A : Base<A> {
+    void foo() {
+        std::println("A");
+    }
+};
+struct B : Base<B> {
+    void foo() {
+        std::println("B");
+    }
+};
+// 在上面的例子中，Base<T>是一个静态多态的基类，T是派生类
+// A和B并不是多态，因为它们本身是不同的类型，如果添加一个函数模板进行转发
+template <typename T>
+void foo(Base<T> *in) {
+    in->show();
+}
+// 这样看上去就有些像多态
+// 但是实际上是通过static_cast转换成基类指针实现的静态多态，因为在编译时就已经确定了调用的函数
+
+
+// CRTP实现对象计数
+// 对象计数通常通过一个static int成员来实现
+// 如果要实现多个类型的对象计数，考虑用继承做一个基类实现计数功能，所有需要对象计数的类型都继承这个类
+// 但是，对象计数依靠的是静态成员，所有继承都会共用一个计数，而无法做到每个派生类单独计数
+// 利用奇异递归模板可以实现不同派生类的对象计数
+template <typename T>
+struct Counter
+{
+    inline static int objects_created = 0;
+    inline static int objects_alive = 0;
+    Counter() {
+        ++objects_created;
+        ++objects_alive;
+    }
+    Counter(const Counter&) {
+        ++objects_created;
+        ++objects_alive;
+    }
+    ~Counter() {
+        --objects_alive;
+    }
+};
+struct X : Counter<X> {};
+struct Y : Counter<Y> {};
+// 由于X和Y继承自不同的基类，所以不会共用一个计数器
+
+
+// CRTP实现自增运算
+template <typename T>
+struct Incrementable {
+    decltype(auto) operator++() {
+        auto& self = static_cast<T&>(*this);
+        return self.post_inc();
+    }
+    auto operator++(int) {
+        auto& self = static_cast<T&>(*this);
+        auto temp = self;
+        ++self;
+        return temp;
+    }
+};
+struct A : Incrementable<A> {
+    int i = 0;
+    A& post_inc() {
+        ++i;
+        return *this;
+    }
+};
+// 显式对象形参简化CRTP
+struct inc_op{
+    decltype(auto) operator++(this auto&& self) {
+        return self.post_inc();
+    }
+    auto operator++(this auto&& self, int) {
+        auto temp = self;
+        ++self;
+        return temp;
+    }
+};
+struct B : inc_op {
+    int i = 0;
+    A& post_inc() {
+        ++i;
+        return *this;
+    }
+};
+// 观察两种实现的区别，显式对象形参的实现通过参数的万能引用省略了static_cast的类型转换
+
+
+// 显式对象形参实现递归lambda表达式
+// 在C++11时，递归lambda通常用一个std::function对象来实现
+std::function<int(int)> f = [&f](int n) {
+    if (n == 0) return 1;
+    return n * f(n - 1);
+};
+// 但是这无法使用auto推导参数类型，并且std::function对象的构造和调用都会带来额外的开销
+// 在C++14时，基于 Y Combinator 即Y不动点组合子实现，这是lambda演算中实现匿名函数递归调用的方法，简单实现如下
+auto f = [](auto&& f, int n) {
+    if (n == 0) return 1;
+    return n * f(f, n - 1);
+};
+// 这种写法每次要传一个自身的引用，看起来很奇怪，而且很麻烦
+// lambda表达式是一个匿名类对象，但是在lambda表达式里面不能使用this指针
+// 这是因为lambda表达式可能定义于一个成员函数中，此时this被用于指代该对象，如果允许this在lambda表达式中指代lambda表达式自己，就会产生歧义
+
+// C++23利用显式对象形参实现，其语法与 Y Combinator 类似，即第一个参数接受一个闭包对象，这里是this引用
+auto f = [](this auto&& self, int n) {
+    if (n == 0) return 1;
+    return n * self(n - 1);
+};
+// 这样在调用时就不需要传递额外的参数了
+
+
+
+
+// C++20
+// ranges
+ranges::all_of();
+ranges::any_of();
+ranges::none_of();
+
+std::ranges::take_view(range, n);       // 返回前n个元素的view
+auto result = nums | views::take(5);    // result是一个view，包含nums的前5个元素
+auto result = nums | views::filter(     // filter返回一个view，包含nums中所有满足谓词的元素
+    [](int i) {
+        return 0 == i % 2; 
+    });
+
+// std::transform
+// 一元
+result_begin std::transform(input_begin, input_end, result_begin, transformer);
+// 从input_begin到input_end，每个元素作为参数传入transformer
+// 并将transformer的返回值写入result_begin开始的位置，返回result_begin
+// 二元
+result_begin std::transform(input_1_begin, input_1_end, input_2_begin, result_begin, transformer);
+// 从input_1_begin到input_1_end，每个元素作为第一个参数传入transformer
+// 从input_2_begin开始，每个元素作为第二个参数传入transformer
+// 并将transformer的返回值写入result_begin开始的位置，返回result_begin
+
+// std::ranges::transform
+// std::ranges::transform 不保证按顺序应用 op 或 binary_op
+// 如果要按顺序应用函数到序列，使用 std::ranges::for_each
+std::sort(v.begin(), v.end());
+std::ranges::sort(v);
+
+std::transform(m.begin(), m.end(), res.begin(), FindFirst);
+std::ranges::transform(m, res.begin(), FindFirst);
+
+auto result = nums | views::transform([](int &i)
+                                      { return i *= i; });
+const std::vector<std::string> words{"one", "two", "three", "four", "five"};
+auto result = words | views::reverse;
+auto rnums = view::iota(1, 10); // 生成序列
+
+// 如果要操作序列的一部分
+sort(v.begin() + 5, v.end());
+std::ranges::sort(std::ranges::views::drop(v, 5));  // 从第5个元素开始排序
+// 可以使用 std::ranges::subrange
+std::ranges::sort(std::ranges::subrange(v.begin() + 5, v.end()));
+// 组合视图
+std::ranges::sort(std::ranges::views::drop(std::ranges::views::reverse(v), 5));
+
+
+
+// C++20
+// bitset
+// C++23起，bitset的所有成员函数都是constexpr的
+constexpr std::bitset<4> b1;
+constexpr std::bitset<4> b2{0xA}; // 0B1010
+std::bitset<4> b3{"0011"};  // C++23起可以是constexpr
+std::bitset<8> b4{"ABBA", /*length*/ 4, /*0:*/ 'A', /*1:*/ 'B'}; // 0B0000'0110
+b3.set();   // 0B1111
+b3.reset(); // 0B0000
+b3.set(0);  // 0B0001
+b3.set(0, false);  // 0B0000
+b3[0] == true; // []返回bool值，或者返回std::bitset::reference对象，即允许写入所请求的位
+
+b3.size();  // 返回位数4
+b3.count(); // 返回1的数量
+
+b3.all();   // 是否全为1
+b3.any();   // 是否存在1
+b3.none();  // 是否全为0
+
+b3.flip();  // 翻转
+b3.flip(2); // 翻转第2位
+b3.test(2); // 查看第i位是否为1，也可以理解为返回第i位
+
+b4.to_string(); // 返回字符串"00000110"
+b4.to_string('*');      // 返回字符串"*****11*"
+b4.to_string('0', 'X'); // 返回字符串"00000XX0"
+// to_string('0代表的字符', '1代表的字符')，默认是'0'和'1'
+b4.to_ulong();  // 返回unsigned long，即0B00000110
