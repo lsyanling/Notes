@@ -2384,6 +2384,24 @@ int main()
     foo<int, double> v4(5, 6.8); // 编译成功
 }
 
+// 类内使用的inline static数据成员，可以通过初始化推导成员的模板参数，但是不支持部分参数推导
+struct A
+{
+    inline static foo x{1, 2}; // 编译成功
+    inline static foo x{1, 2}; // 编译错误
+};
+
+// 但是，在类中声明带有默认参数的模板类成员不能省略<>
+template <class T = int>
+struct fooo{};
+struct A
+{
+    fooo<> x1;  // 编译成功
+    fooo x2;    // 编译错误
+    inline static fooo x3;  // 编译错误
+};
+// 总之，在类中使用模板类成员时，不支持部分参数推导，应省略<>，使用带默认参数的模板类成员时，不能省略<>
+
 // 可以利用类模板参数推导保存lambda表达式
 template <class T>
 struct LambdaWarp{
@@ -2455,7 +2473,7 @@ template <class T, std::size_t N>
 struct A{
     T array[N];
 };
-A a{{1, 2, 3}}; // 推导数组长度
+A a{{1, 2, 3}}; // 推导数组长度（通过自定义模板推导指引，可以省略花括号）
 // 同样，如果显式指定数组长度，可以省略花括号
 template <typename T>
 struct B{
@@ -2579,31 +2597,6 @@ void func() {
 	Value_Type_t v;
 }
 
-// 自定义推导指引，必须出现在和模板类的定义相同的作用域或命名空间内，通常紧跟着模板类的定义
-Value(int, char)->Value<long, int>;
-
-// 聚合类的模板化
-template<typename T>
-struct ValueWithComment{
-    T value;
-    std::string comment;
-}
-// C++17
-// 聚合类模板的推导指引
-ValueWithComment(const char*, const char*)->ValueWithComment<std::string>;
-
-// 模板推导指引
-template <typename _T1, typename _T2>
-pair(_T1, _T2) -> pair<_T1, _T2>; // 按照pair(_T1, _T2)的形式推导，数组退化成指针
-// 甚至可以如下推导
-namespace std{
-    template <class... T>
-    vector(T&&... t)->vector<std::common_type_t<T...>>; // 公共类型
-}
-std::vector v{1, 5u, 3.0};
-
-// 推导指引也支持explicit说明符，从而要求对象必须显式构造
-
 // 非类型模板参数
 // 非类型模板参数只能是整型常量，包含枚举在内，指向对象、函数、成员的指针，对象或函数的左值引用，或者是std::nullptr_t
 // 不能是浮点数或对象，当作为对象的指针时，对象不能是字符串常量、临时变量或数据成员以及其它子对象
@@ -2661,11 +2654,11 @@ int main(){
     bar<int, double, unsigned int> b(1, 5.0, 8);
 }
 // 例2
-template <class ..Args>
+template <class ...Args>
 int baz(T ...t){
     return 0;
 }
-template <class …Args>
+template <class ...Args>
 void foo(Args ...args) {}
 template <class ...Args>
 class bar{
@@ -2773,6 +2766,51 @@ void print(T firstArg, Types ...args) {
     sizeof...(args);
 	print(args...);
 }
+
+// 自定义推导指引，必须出现在和模板类的定义相同的作用域或命名空间内，通常紧跟着模板类的定义
+Value(int, char) -> Value<long, int>;
+
+// 聚合类的模板化
+template <typename T>
+struct ValueWithComment
+{
+    T value;
+    std::string comment;
+}
+// C++17
+// 聚合类模板的推导指引
+ValueWithComment(const char *, const char *) -> ValueWithComment<std::string>;
+
+// 模板推导指引
+template <typename _T1, typename _T2>
+pair(_T1, _T2) -> pair<_T1, _T2>; // 按照pair(_T1, _T2)的形式推导，数组退化成指针，因为函数参数不会是数组
+// 但是可以让模板遇见指针就推导为数组类型
+template <typename T>
+Test(T *) -> Test<T[]>;
+char *p = nullptr;
+Test t(p); // t 是 Test<char[]>
+
+// 甚至可以如下推导
+namespace std
+{
+    template <class... T>
+    vector(T &&...t) -> vector<std::common_type_t<T...>>; // 公共类型
+}
+std::vector v{1, 5u, 3.0};
+
+// std::array的推导实现
+template <typename T, std::size_t size>
+struct array
+{
+    T arr[size];
+};
+::array arr{1, 2, 3, 4, 5}; // 错误
+
+template <typename T, typename... Args>
+array(T t, Args...) -> array<T, sizeof...(Args) + 1>;
+::array arr{1, 2, 3, 4, 5}; // 聚合类初始化
+
+// 推导指引也支持explicit说明符，从而要求对象必须显式构造
 
 // C++17
 // 折叠表达式
@@ -4196,3 +4234,16 @@ b4.to_string('*');      // 返回字符串"*****11*"
 b4.to_string('0', 'X'); // 返回字符串"00000XX0"
 // to_string('0代表的字符', '1代表的字符')，默认是'0'和'1'
 b4.to_ulong();  // 返回unsigned long，即0B00000110
+
+
+// 弃值表达式
+// 弃值表达式是只用来实施它的副作用的表达式，从这种表达式计算的值会被舍弃
+// 弃值表达式包括任何表达式语句的完整表达式，内建逗号运算符位于左边的实参，以及转换到void的类型转换表达式的实参
+// 弃值表达式的计算结果不会进行数组到指针和函数到指针转换
+// 弃值表达式几乎不进行从左值到右值的转换，除非设计volatile，见cppreference
+template <typename... Args>
+void print(const Args &...args)
+{
+    using Arr = int[];  // 创建临时数组，需要使用别名
+    (void)Arr{0, (std::cout << args << ' ', 0)...}; // 当调用print()时，int a[] = {0, };是合法的定义，C++允许列表初始化末尾有一个逗号
+}
