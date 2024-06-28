@@ -13,6 +13,17 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 
+
+// 扩展方法
+// 扩展方法是非泛型静态类中的静态方法，它可以像实例方法一样调用
+// 扩展方法的第一个参数是this关键字修饰的参数，表示扩展的类型
+public static class MyExtension{
+    // 为string类型添加一个扩展方法，可以通过string.show()调用
+    public static void Show(this string str){
+        Console.WriteLine(str);
+    }
+}
+
 // 异步多线程
 void func(string s){}
 Action<string> action = func;
@@ -303,13 +314,13 @@ async ValueTask<object> DownloadData(string website){
 
 // 反射
 // 加载程序集 获取类型 创建对象 类型转换 使用对象
-Assembly assembly = Assembly.Load("xxx");           // 程序集名称，不带扩展名
-Assembly assembly = Assembly.LoadFile("xxx.dll");   // 意义不大，加载的dll可能还依赖其它项
+Assembly assembly = Assembly.Load("xxx");           // 程序集名称，不带扩展名，从当前目录加载
+Assembly assembly = Assembly.LoadFile("xxx.dll");   // 意义不大，加载的dll可能还依赖其它项，可以从其它目录加载
 Assembly assembly = Assembly.LoadFrom("xxx.dll");
 
 Type type = assembly.GetType("xxx.MySqlHelper");
 object oHelper = Activator.CreateInstance(type);
-object iDBHelper = (IDBHelper)oDBHelper;
+object iDBHelper = (IDBHelper)oDBHelper;    // 编译器不知道oDBHelper是IDBHelper类型，需要强制类型转换
 iDBHelper.Query();
 
 // 使用configuration加载配置到字符串，实现不修改代码，通过修改配置文件使得程序构造的对象不同
@@ -328,35 +339,201 @@ string IDBHelperConfig = ConfigurationManager.AppSettings["IDBHelperConfig"];
 // 因为反射不是通过引用加载dll，而是通过Assembly.Load()从路径下加载程序集
 
 // 通过反射可以调用私有构造函数，破坏单例
+// 调用带参数的构造函数
+Type type = assembly.GetType("xxx.MySqlHelper");
+object oHelper = Activator.CreateInstance(type, new object[]{123, "123"});  // 第一个参数是int，第二个参数是string
 
-// 泛型的反射
+// 泛型类的反射
 Assembly assembly = Assembly.LoadFrom("xxx.dll");
-Type type = assembly.GetType("xxx.GenericClass`3");     // `3表示接受3个泛型参数，不加`3会找不到类型
-object oGeneric = Activator.CreateInstance(type);       // 不传入泛型参数会抛出异常
-Type newType = type.MakeGenericType(new Type[]{typeof(int),typeof(string),typeof(bool)});  // 返回一个Type
+Type type = assembly.GetType("xxx.GenericClass`3");     // `3表示接受3个泛型参数，不加`3会找不到类型 class GenericClass<T, X, W>
+object oGeneric = Activator.CreateInstance(type);       // 错误，不传入泛型参数会抛出异常
+Type newType = type.MakeGenericType(new Type[]{typeof(int),typeof(string),typeof(bool)});  // 创建一个泛型的Type
 object oGeneric = Activator.CreateInstance(newType);
 
 // 不类型转换而调用方法：获取方法
 Type type = assembly.GetType("xxx.MySqlHelper");  
 object oHelper = Activator.CreateInstance(type);
-MethodInfo method = type.GetMethod("Show");
+MethodInfo method = type.GetMethod("Show");     // 通过方法名获取方法
 method.Invoke(oHelper, null);       // 第一个参数是对象，第二个参数是object[]，即方法的参数列表
                                     // 如果是静态方法，第一个参数可以是null
 // 获取私有方法
 MethodInfo privateMethod = type.GetMethod("Show", BingdingFlags.Instance|BindingFlags.NonPublic);
-// 获取重载方法
+// 获取重载方法，需要传入参数列表
 MethodInfo OverloadMethod = type.GetMethod("Show", new Type[]{typeof(int)});
+
 // 获取泛型类的泛型方法
-Type newType = type.MakeGenericType(new Type[]{typeof(int),typeof(string),typeof(bool)});
+Type type = assembly.GetType("xxx.GenericClass`1");     // 假定type是一个泛型类class GenericClass<T>
+Type newType = type.MakeGenericType(new Type[]{typeof(int)});   // newType是一个泛型类class GenericClass<int>
 object oGeneric = Activator.CreateInstance(newType);
-MethodInfo method = type.GetMethod("Show");     // Show(T t, X x)是泛型方法，但不需要写`1
-MethodInfo genericMethod = method.MakeGenericMethod(new Type[]{typeof(int), typeof(string)});
-genericMethod.Invoke(oGeneric, new object[]{123, "123"});
+MethodInfo method = newType.GetMethod("Show");     // 假定Show(T t, X x, W w)是泛型类方法，但方法不需要写占位符`2
+MethodInfo genericMethod = method.MakeGenericMethod(new Type[]{typeof(int), typeof(string)});   // 注意，类本身的泛型参数已经确定，所以不需要传入
+genericMethod.Invoke(oGeneric, new object[]{111, 123, "123"});  // 第一个参数是泛型类的泛型参数T t，后面两个是方法的泛型参数X x, W w
 
 // 将硬编码转为字符串的意义：MVC+URL —— 类名称+方法名称
 
 
+// 属性和字段的反射
+Type type = typeof(MySqlHelper);
+type.Name;  // MySqlHelper
+object oHelper = Activator.CreateInstance(type);    // 创建对象
+PropertyInfo property = type.GetProperty("Name");   // 获取Name属性
+foreach(PropertyInfo property in type.GetProperties()){  // 获取所有属性
+    Console.WriteLine(property.Name);
+    Console.WriteLine(property.GetValue(oHelper));   // 获取对象的属性值
+    property.SetValue(oHelper, "123");  // 设置对象的属性值
+}
+
+// 意义
+// 例如，将数据库对象转换为视图对象，可以通过反射将数据库对象的属性值赋给视图对象的属性值，它们的属性名称相同，因此不需要显式知道它们的属性名即可操作
+
+// 获取Type的方式
+Type type = typeof(MySqlHelper);    // 通过typeof和类名获取Type
+Type type = oHelper.GetType();      // 通过对象获取Type
+Type type = assembly.GetType("xxx.MySqlHelper");    // 通过程序集和类的全限定名获取Type
 
 
 
+// 特性 attribute
+// 使用特性，可以有效地将元数据或声明性信息与代码（程序集、类型、方法、属性等）相关联
+// 将特性与程序实体相关联后，可以在运行时使用反射这项技术查询特性
 
+// 特性向程序添加元数据
+// 为一个元素添加特性，编译器会在中间语言IL中向该元素添加元数据
+
+// 特性是一个继承了Attribute的类，可以通过反射获取特性的信息
+// 特性类一般以Attribute结尾，使用的时候可以省略Attribute，如果不是Attribute结尾，使用的时候必须写全名
+class MyAttribute : Attribute{
+    public string Name { get; set; }
+    public MyAttribute(string name){
+        Name = name;
+    }
+    public MyAttribute(){
+    }
+}
+
+[My]
+[My()]  // 等价于调用无参构造的[My]，但一个特性只能出现一次，除非为特性类添加特性[AttributeUsage(AllowMultiple = true)]
+[My(Name = "123")]  // 在声明特性时，不仅可以向构造函数传参，还可以直接指定属性和字段的值
+class MyClass{
+    // 可以为函数、参数、返回值添加特性
+    [return: My]
+    public string MyMethod([My]string name){
+        return name;
+    }
+    // 特性[AttributeUsage] 的其它参数 
+    // AttributeTargets.All  // 可以应用到任何元素
+    // AttributeTargets.Class  // 可以应用到类
+    // AttributeTargets.Constructor  // 可以应用到构造函数
+    // Inherited = true  // 特性可以被继承，默认true
+}
+
+// 为类添加特性后，在类中主动调用特性，特性才会生效
+// 通过反射获取特性
+Type type = typeof(MyClass);
+object[] attributes = type.GetCustomAttributes(true);  // 通过GetCustomAttributes()扩展方法获取所有特性，第一个参数表示是否获取继承的特性
+// 特性的构造函数被编译器注入到了类的元数据中，这一步可以理解为调用类中特性的构造函数，实际上是通过反射获取特性的构造函数
+foreach(object attribute in attributes){
+    if(attribute is MyAttribute){
+        MyAttribute myAttribute = (MyAttribute)attribute;
+        Console.WriteLine(myAttribute.Name);    // 获取特性的属性值，特性就像扩展了一个类
+    }
+}
+
+// 获取特性时判断特性是否存在
+if(type.IsDefined(typeof(MyAttribute), true)){
+    MyAttribute myAttribute = (MyAttribute)type.GetCustomAttribute(typeof(MyAttribute), true);
+    Console.WriteLine(myAttribute.Name);
+}
+
+// 获取属性的特性
+PropertyInfo property = type.GetProperty("Name");
+object[] attributes = property.GetCustomAttributes(true);
+foreach(object attribute in attributes){
+    if(attribute is MyAttribute){
+        MyAttribute myAttribute = (MyAttribute)attribute;
+        Console.WriteLine(myAttribute.Name);
+    }
+}
+
+// 获取方法的特性
+MethodInfo method = type.GetMethod("MyMethod");
+object[] attributes = method.GetCustomAttributes(true);
+foreach(object attribute in attributes){
+    if(attribute is MyAttribute){
+        MyAttribute myAttribute = (MyAttribute)attribute;
+        Console.WriteLine(myAttribute.Name);
+    }
+}
+
+// 获取参数的特性
+ParameterInfo parameter = method.GetParameters()[0];
+object[] attributes = parameter.GetCustomAttributes(true);
+foreach(object attribute in attributes){
+    if(attribute is MyAttribute){
+        MyAttribute myAttribute = (MyAttribute)attribute;
+        Console.WriteLine(myAttribute.Name);
+    }
+}
+
+// 获取返回值的特性
+parameterInfo parameter = method.ReturnParameter;
+object[] attributes = parameter.GetCustomAttributes(true);
+foreach(object attribute in attributes){
+    if(attribute is MyAttribute){
+        MyAttribute myAttribute = (MyAttribute)attribute;
+        Console.WriteLine(myAttribute.Name);
+    }
+}
+
+
+// 特性的意义
+// 没有破坏类的封装性，为类添加功能，可以通过特性来实现AOP Aspect Oriented Programming面向切面编程，例如日志、事务、权限等
+
+// 数据库值、属性名称、描述的映射
+public class RemarkAttribute : Attribute{
+    public string Remark { get; set; }
+    public RemarkAttribute(string remark){
+        Remark = remark;
+    }
+}
+
+public enum UserStatus{
+    [Remark("正常")]
+    Normal = 0,
+    [Remark("禁用")]
+    Disable = 1,
+    // [Remark("删除")]
+    Delete = 2
+}
+
+public static class RemarkExtension{
+    public static string GetRemark(this Enum value){
+        // 取枚举值的类型，这里是UserStatus
+        Type type = value.GetType();
+        // 取枚举值的字段
+        FieldInfo field = type.GetField(value.ToString());
+        // 判断字段是否有特性
+        if(field.IsDefined(typeof(RemarkAttribute), true)){
+            // 取字段对应的Remark特性，这里可以理解为调用Remark特性的构造函数
+            RemarkAttribute remarkAttribute = (RemarkAttribute)field.GetCustomAttribute(typeof(RemarkAttribute), true);
+            // 返回Remark特性类的Remark属性
+            return remarkAttribute.Remark;
+        }
+        // 如果没有特性，返回枚举值的字符串，即 Delete
+        return value.ToString();
+    }
+}
+UserStatus.Normal.GetRemark();   // "正常"
+UserStatus userStatus = UserStatus.Normal;
+Console.WriteLine(userStatus.GetRemark());  // 实现了枚举值（即属性名称）到描述的映射
+
+// 可以通过特性来实现ORM Object Relation Mapping对象关系映射，将数据库表映射为类，将字段映射为属性
+
+// 特性的继承
+// 特性可以继承，继承的特性可以继承基类的特性，也可以重写基类的特性
+public class BaseAttribute : Attribute{
+    public virtual void Show(){
+        Console.WriteLine("Base");
+    }
+}
+// 通过继承特性，利用特性的时候field.IsDefined(typeof(BaseAttribute)检查基类特性，只需要写一份代码，然后遍历每个派生的特性
