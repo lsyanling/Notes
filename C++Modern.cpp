@@ -608,6 +608,9 @@ void perfect_forwarding(T&& t) {
     show_type(std::forward<T>(t));
 }
 
+// std::move是把泛左值转换为右值引用，通常用于移动函数形参和栈变量
+// std::forward是把左值转换为左值引用，右值转换为右值引用，通常用于将函数形参作为实参传入另一个函数（即转发）
+
 
 // C++20
 // 右值引用和throw的移动操作
@@ -870,7 +873,7 @@ Point p{.y = 4, .y = 2};    // 错误
 // 这一点和C语言中指定初始化的要求不同，在C语言中，乱序的指定初始化是合法的
 Point p{.y = 4, .x = 2};    // C++编译失败，C可以编译
 
-// 针对联合体中的数据成员只能初始化一次，不能同时指定
+// 联合体中的数据成员只能初始化一次，不能同时指定
 union u {
     int a;
     const char *b;
@@ -1827,7 +1830,7 @@ std::strong_ordering operator<=>(const D&) const = default;
 // 浮点数float和double采用std::partial_ordering作为三向比较返回类型
 // 这是因为浮点数中存在一个NaN，该值与其它浮点数值无关
 std::print("{0}", ((0.0 / 0.0 <=> 1.0) == std::partial_ordering::unordered));   // 输出true
-// 当std::weak_ordering和std::　partial_ordering同时出现在基类和数据成员的类型中时，该类型的三向比较结果是std::partial_ordering
+// 当std::weak_ordering和std::partial_ordering同时出现在基类和数据成员的类型中时，该类型的三向比较结果是std::partial_ordering
 
 // 模板函数std::common_comparison_category
 // 用于在一个类型合集中判断出最终三向比较的结果类型
@@ -2229,7 +2232,7 @@ X *x = new X(); // 分配的地址256字节对齐
 // 属性支持命名空间
 [[namespace::attr(args)]]
 
-// 属性说明符总是声明它前面的对象，在整个声明之前的属性则声明语句种所有声明的对象
+// 属性说明符总是声明它前面的对象，在整个声明之前的属性则声明语句中所有声明的对象
 [[attr1]] 
 class [[attr2]] X{ 
     int i; 
@@ -2388,7 +2391,7 @@ int main()
 struct A
 {
     inline static foo x{1, 2}; // 编译成功
-    inline static foo x{1, 2}; // 编译错误
+    inline static foo<> x{1, 2}; // 编译错误
 };
 
 // 但是，在类中声明带有默认参数的模板类成员不能省略<>
@@ -2400,7 +2403,7 @@ struct A
     fooo x2;    // 编译错误
     inline static fooo x3;  // 编译错误
 };
-// 总之，在类中使用模板类成员时，不支持部分参数推导，应省略<>，使用带默认参数的模板类成员时，不能省略<>
+// NOTE: 总之，在类中使用模板类成员时，不支持部分参数推导，应省略<>，使用带默认参数的模板类成员时，不能省略<>
 
 // 可以利用类模板参数推导保存lambda表达式
 template <class T>
@@ -2482,7 +2485,7 @@ struct B{
 B b = {0, 1};
 
 // 类模板的成员函数只有在被调用时才会实例化
-// 然而，对于友元函数，如果在类内定义，同上，如果在类内声明而在类外定义，会变得很复杂
+// 对于友元函数，如果在类内定义，同上，但如果在类内声明而在类外定义，会变得很复杂
 // 可以在模板类内声明一个新的函数模板
 template<typename T>
 struct Value {
@@ -4246,4 +4249,72 @@ void print(const Args &...args)
 {
     using Arr = int[];  // 创建临时数组，需要使用别名
     (void)Arr{0, (std::cout << args << ' ', 0)...}; // 当调用print()时，int a[] = {0, };是合法的定义，C++允许列表初始化末尾有一个逗号
+}
+
+// C++23
+// 静态索引运算符 static operator[]
+struct StaticArray {
+    static int data[10];
+    static int& operator[](std::size_t index) {
+        return data[index];
+    }
+};
+ 
+int StaticArray::data[10] {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+ 
+int main() {
+    StaticArray::data[3] = 42;
+    std::cout << StaticArray::data[3] << std::endl;  // Output: 42
+    return 0;
+}
+
+// C++23
+// 容器 std::flat_map std::flat_set
+// 使用连续内存存储，提高缓存命中率
+
+// C++23
+// std::mdspan 多维数组视图
+int main() {
+    int data[6] = {1, 2, 3, 4, 5, 6};
+    std::mdspan<int, std::extents<3, 2>> matrix(data);
+ 
+    for (int i = 0; i < 3; ++i) {
+        for (int j = 0; j < 2; ++j) {
+            std::cout << matrix(i, j) << ' ';
+        }
+        std::cout << '\n';
+    }
+}
+// mdspan是一个多维数组视图，可以用来访问多维数组的元素
+// mdspan的第一个模板参数是元素类型，第二个模板参数是维度
+// mdspan的构造函数接受一个指向连续内存的指针，以及一个std::extents对象，std::extents对象指定了每个维度的大小
+// mdspan的operator()函数接受一个或多个索引，返回对应元素的引用
+// mdspan不持有元素，只是一个视图，不能超出原数组的范围
+
+// C++23
+// std::generator 生成器
+
+// C++23
+// std::expected 期望
+std::expected<int, std::string> safe_divide(int a, int b) {
+    if (b == 0) {
+        return std::unexpected("Division by zero!");
+    }
+    return a / b;
+}
+
+int main() {
+    auto result = safe_divide(10, 2);
+    if (result)
+        std::cout << "Result: " << result.value() << std::endl;
+    else
+        std::cout << "Error: " << result.error() << std::endl;
+
+    result = safe_divide(10, 0);
+    if (result)
+        std::cout << "Result: " << result.value() << std::endl;
+    else
+        std::cout << "Error: " << result.error() << std::endl;
+
+    return 0;
 }

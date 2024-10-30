@@ -1,5 +1,8 @@
 import java.io.Serializable;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+
+import javax.security.auth.callback.Callback;
 
 public class Java {
 
@@ -147,5 +150,136 @@ public class Java {
         }
 
         // 动态代理
+        // 从 JVM 角度来说，动态代理是在运行时动态生成类字节码，并加载到 JVM 中的
+        // Spring AOP、RPC 框架的实现都依赖了动态代理
+        // 动态代理的实现方式有很多种，比如 JDK 动态代理、CGLIB 动态代理
+
+        // JDK 动态代理
+        // InvocationHandler 接口和 Proxy 类
+        // Proxy.newProxyInstance(ClassLoader loader, Class<?>[] interfaces, InvocationHandler h)
+        // 这个方法用来生成一个代理对象
+        // interfaces 参数是目标对象的接口，因为 JDK 动态代理只能代理接口
+        // handler 参数是一个 InvocationHandler 对象，有一个 invoke() ，当代理对象调用方法时，会调用该方法
+        public interface InvocationHandler {
+            public Object invoke(Object proxy, Method method, Object[] args)
+                throws Throwable;
+        }
+
+        // 目标方法接口
+        public interface SmsService {
+            String send(String message);
+        }
+
+        // 目标类的目标方法
+        public class SmsServiceImpl implements SmsService {
+            public String send(String message) {
+                System.out.println("send message:" + message);
+                return message;
+            }
+        }
+
+        // 代理类，实现了 InvocationHandler 接口
+        public class DebugInvocationHandler implements InvocationHandler {
+            // 代理类持有一个目标对象
+            private final Object target;
+            public DebugInvocationHandler(Object target) {
+                this.target = target;
+            }
+
+            @Override
+            public Object invoke(Object proxy, Method method, Object[] args) throws InvocationTargetException, IllegalAccessException {
+                System.out.println("before method " + method.getName());
+                Object result = method.invoke(target, args);
+                System.out.println("after method " + method.getName());
+                return result;
+            }
+        }
+
+        // 代理工厂类，对于任何目标类，通过 DebugInvocationHandler 类生成一个代理对象
+        public class JdkProxyFactory {
+            public static Object getProxy(Object target) {
+                return Proxy.newProxyInstance(
+                        target.getClass().getClassLoader(), // 目标类的类加载器
+                        target.getClass().getInterfaces(),  // 代理需要实现的接口，可指定多个
+                        new DebugInvocationHandler(target)  // 代理对象对应的自定义 InvocationHandler
+                );
+            }
+        }
+
+        SmsService smsService = (SmsService) JdkProxyFactory.getProxy(new SmsServiceImpl());
+        smsService.send("java");
+
+        // 在动态代理中，代理类不实现目标接口，而是实现 InvocationHandler 接口，具体要代理的方法接口由 Proxy.newProxyInstance() 方法传入
+
+        // CGLIB 动态代理
+        // JDK 动态代理的问题是只能代理实现了接口的类，而不能代理类本身的方法
+        // CGLIB 通过继承实现动态代理，原理是对指定的目标类生成一个子类，并覆盖其中的方法
+
+        // CGLIB 动态代理通过 MethodInterceptor 接口和 Enhancer 类实现
+        // Enhancer 类用于生成代理对象
+        public interface MethodInterceptor extends Callback{
+            // 拦截目标类中的方法
+            public Object intercept(Object obj, java.lang.reflect.Method method, Object[] args, MethodProxy proxy) 
+                throws Throwable;
+        }
+
+        public class AliSmsService {
+            public String send(String message) {
+                System.out.println("send message:" + message);
+                return message;
+            }
+        }
+
+        public class DebugMethodInterceptor implements MethodInterceptor {
+            /**
+             * @param o           被代理的对象（需要增强的对象）
+             * @param method      被拦截的方法（需要增强的方法）
+             * @param args        方法入参
+             * @param methodProxy 用于调用原始方法
+             */
+            @Override
+            public Object intercept(Object o, Method method, Object[] args, MethodProxy methodProxy) throws Throwable {
+                System.out.println("before method " + method.getName());
+                Object object = methodProxy.invokeSuper(o, args);
+                System.out.println("after method " + method.getName());
+                return object;
+            }
+        }
+
+        public class CglibProxyFactory {
+            public static Object getProxy(Class<?> clazz) {
+                // 创建动态代理增强类
+                Enhancer enhancer = new Enhancer();
+                // 设置类加载器
+                enhancer.setClassLoader(clazz.getClassLoader());
+                // 设置被代理类
+                enhancer.setSuperclass(clazz);
+                // 设置方法拦截器
+                enhancer.setCallback(new DebugMethodInterceptor());
+                // 创建代理类
+                return enhancer.create();
+            }
+        }
+
+        AliSmsService aliSmsService = (AliSmsService) CglibProxyFactory.getProxy(AliSmsService.class);
+        aliSmsService.send("java");
+
+        // CGLIB 动态代理通过继承的方式实现，因此不能代理 final 类和 final 方法
+
+        // JDK 动态代理和 CGLIB 动态代理的区别
+        // JDK 动态代理是基于接口的，CGLIB 动态代理是基于类的
+
+        // Unsafe
+        // Unsafe 依赖 Native 方法
+
+        // Unsafe是一个单例类
+
+        // Service Provider Interface (SPI)
+        // API 由实现方提供，SPI 由调用方提供
+
+        // SPI 的实现方式
+        // 1. 通过配置文件
+        // 2. 通过注解
+        // 3. 通过 Java 的 ServiceLoader 类
     }
 }
