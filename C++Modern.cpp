@@ -4318,3 +4318,59 @@ int main() {
 
     return 0;
 }
+
+// C++11
+// 内存序
+enum memory_order {
+    memory_order_relaxed,
+    memory_order_consume,
+    memory_order_acquire,
+    memory_order_release,
+    memory_order_acq_rel,
+    memory_order_seq_cst
+};
+// C++20重写了这个枚举，memory_order::relaxed同memory_order_relaxed
+enum class memory_order : /* 未指明 */
+{
+    relaxed,    // 宽松序，仅要求原子性
+    consume,    // 在load时，当前线程中依赖于当前load值的读或写不能被重排到此加载之前，其他线程中对该release原子变量有数据依赖的变量的写入，对当前线程可见
+    acquire,    // 在load时，当前线程中的读或写不能被重排到此load之前，其他线程中对该release原子变量的写入，对当前线程可见
+    release,    // 在store时，当前线程中的读或写不能被重排到此store之后，当前线程的所有写入，可见于acquire该同一原子变量的其他线程，并且对该原子变量的带依赖写入对其他消费同一原子对象的线程可见
+    acq_rel,    // 在store时，当前线程的读或写内存不能被重排到此store之前或之后，所有release同一原子变量的线程的写入可见于修改之前，而且修改可见于其他获得同一原子变量的线程。
+    seq_cst     // 在加载时同acquire，存储时同release，而读修改写操作进行获得操作和释放操作，再加上存在一个单独全序，其中所有线程以同一顺序观测到所有修改
+};
+// std::memory_order 指定内存访问如何围绕原子操作排序
+// 多个线程同时读或写数个变量时，一个线程能观测到变量值更改的顺序不同于另一个线程写它们的顺序，更改的顺序甚至能在多个读取线程间相异
+// 库中原子操作默认提供 seq_cst
+
+// C++26
+// Contracts 契约
+contract_assert(x > 0);
+// contract_assert 有4级检查模式，通过编译器标志全局配置
+clang++ -std=c++26 -fcontract-semantic=observe app.cpp
+// ignore   跳过检查，用于生产环境
+// enforce  打印失败信息，终止程序
+// observe  打印失败信息，继续执行
+// quick-enforce    立即静默终止程序，用于安全关键系统
+
+// 自定义违规处理
+// 通过定义全局函数 handle_contract_violation 定制错误响应逻辑
+void handle_contract_violation(const contract_violation& info) {
+    std::cerr << "Contract violation at " << info.file() << ":" << info.line() << std::endl;
+    if(info.semantic() == contract_violation::enforce) {
+        std::cerr << "Terminating program" << std::endl;
+        std::terminate();
+    }
+}
+
+// 契约断言函数位置 pre/post
+T& operator[](size_t index) 
+    pre(index < size()) // 调用时检查，下标合法性检查
+// pre 对调用方可见
+
+void clear()
+    post(size() == 0)   // 返回时检查，操作后容器为空
+
+// 可以在 post 中引用返回值
+int pop()
+    post(ret: ret.isValid()) // ret 是返回值

@@ -1,0 +1,42 @@
+ls: list
+cd: change directory
+pwd: print working directory
+file: 查看文件类型
+touch: 创建空文件，或更新同名文件的修改日期
+mkdir
+rm
+cp
+mv
+who
+which: 显示命令位置
+
+cat: 显示⽂件的内容 -n显示行号
+tac: 按行倒序显示文件内容
+less(more): 分页显示文件(默认显示进度)
+head, tail: 查看⽂件的开头和结尾
+
+shutdown, reboot
+lscpu
+date, clock
+
+grep: global regular expression print
+find: 在当前目录下查找⽂件和⽬录
+chmod: change mode
+chown: change owner
+ps: process status 
+ps aux
+all users 显示所有用户的进程
+user 显示用户
+x: also show processes not attached to a terminal 显示无控制终端的进程
+
+kill:
+df: disk free
+du: disk used
+tar: tape archive
+
+ifconfig: (network) interfaces configuring
+ping:
+ssh: secure shell
+
+apt(Debian/Ubuntu)  advanced packaging tool
+yum(Red Hat/CentOS)
