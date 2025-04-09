@@ -9,11 +9,15 @@ cp
 mv
 who
 which: 显示命令位置
+where
+locate
+systemctl: system control
 
 cat: 显示⽂件的内容 -n显示行号
 tac: 按行倒序显示文件内容
 less(more): 分页显示文件(默认显示进度)
 head, tail: 查看⽂件的开头和结尾
+sed: stream editor
 
 shutdown, reboot
 lscpu
@@ -37,6 +41,14 @@ tar: tape archive
 ifconfig: (network) interfaces configuring
 ping:
 ssh: secure shell
+
+id: 查看当前用户信息
+id xxx: 查看xxx用户的信息
+
+zip, unzip
+gzip, gunzip
+
+tmux: terminal multiplexer
 
 apt(Debian/Ubuntu)  advanced packaging tool
 yum(Red Hat/CentOS)

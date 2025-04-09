@@ -4374,3 +4374,9 @@ void clear()
 // 可以在 post 中引用返回值
 int pop()
     post(ret: ret.isValid()) // ret 是返回值
+
+
+// C++26
+// inplace_vector
+// 固定大小的容器，只占用栈空间，而vector占用堆内存
+std::inplace_vector<int, 10> v;
